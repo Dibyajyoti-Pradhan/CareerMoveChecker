@@ -1,0 +1,11 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+cmc:
+  admin:
+    password: test_admin
+  companies-house:
+    api-key: test_key

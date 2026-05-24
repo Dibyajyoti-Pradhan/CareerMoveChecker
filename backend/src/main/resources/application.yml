@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: careermovechecker
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/careermovechecker}
+    username: ${DATABASE_USERNAME:careermove}
+    password: ${DATABASE_PASSWORD:careermove}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+
+cmc:
+  admin:
+    password: ${ADMIN_PASSWORD:change_me_local}
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  companies-house:
+    base-url: https://api.company-information.service.gov.uk
+    api-key: ${COMPANIES_HOUSE_API_KEY:}
+    timeout-ms: 8000
+  risk:
+    engine: ${RISK_SCORING_ENGINE:RULE_BASED}
+    model-version: ${RISK_SCORING_MODEL_VERSION:rules-v1}
+  cache:
+    profile-ttl-hours: 24
+    officers-ttl-hours: 24
+    psc-ttl-hours: 24
+    charges-ttl-hours: 24
+    filing-history-ttl-hours: 12
+    insolvency-ttl-hours: 12
+
+logging:
+  level:
+    root: INFO
+    com.careermovechecker: INFO
+    org.springframework.security: WARN

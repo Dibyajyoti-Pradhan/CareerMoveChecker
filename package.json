@@ -1,0 +1,13 @@
+{
+  "name": "careermovechecker-root",
+  "private": true,
+  "scripts": {
+    "dev:fe": "cd frontend && npm run dev",
+    "dev:be": "cd backend && mvn spring-boot:run",
+    "build:fe": "cd frontend && npm run build",
+    "build:be": "cd backend && mvn -DskipTests package",
+    "test:be": "cd backend && mvn test",
+    "docker:build": "docker build -t careermovechecker .",
+    "docker:run": "docker run -p 8080:8080 --env-file .env careermovechecker"
+  }
+}
