@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { PersonaProvider } from '../lib/persona';
+import { WaitlistCTA } from '../components/WaitlistCTA';
 
 export function ForAgenciesPage() {
   return (
@@ -194,8 +195,8 @@ function Content() {
               </div>
             </div>
             <div className="right">
-              <Link className="btn btn-primary btn-lg" to="/pricing">Start Agency</Link>
-              <a className="btn btn-secondary btn-lg" href="mailto:hello@careermovechecker.com">Talk to us</a>
+              <WaitlistCTA tier="Agency" ctaId="for-agencies.tier" variant="primary" size="lg">Talk to us about Agency</WaitlistCTA>
+              <a className="btn btn-secondary btn-lg" href="mailto:hello@careermovechecker.com">Email us</a>
             </div>
           </div>
         </div>

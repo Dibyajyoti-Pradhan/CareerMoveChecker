@@ -43,7 +43,14 @@ export function CompanyReportPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<TabId>('flags');
+  const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
   const { persona } = usePersona();
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     let stop = false;
@@ -62,6 +69,9 @@ export function CompanyReportPage() {
     try {
       const r = await api.refreshReport(id);
       setReport(r);
+      setToast({ text: 'Report refreshed from Companies House', tone: 'ok' });
+    } catch {
+      setToast({ text: 'Refresh failed — try again', tone: 'bad' });
     } finally {
       setRefreshing(false);
     }
@@ -86,6 +96,20 @@ export function CompanyReportPage() {
 
   return (
     <div className="wrap">
+      {toast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 90,
+            background: toast.tone === 'ok' ? 'var(--ok-bg)' : 'var(--bad-bg)',
+            color: toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)',
+            border: `1px solid ${toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)'}`,
+            padding: '10px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          {toast.text}
+        </div>
+      )}
       {/* ============ ZONE A ============ */}
       <section className="zone-a">
         <div className="id-card">
@@ -159,11 +183,28 @@ export function CompanyReportPage() {
 
             <div className="answer-cta">
               <span className="save-line"><b>{PERSONA_SAVE_LINE[persona].split('.')[0]}.</b>{PERSONA_SAVE_LINE[persona].split('.').slice(1).join('.')}</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => api.saveCompany({ companyNumber: p.companyNumber, companyName: p.companyName }).catch(() => {})}>
+              <button className="btn btn-secondary btn-sm" onClick={async () => {
+                try {
+                  await api.saveCompany({ companyNumber: p.companyNumber, companyName: p.companyName });
+                  setToast({ text: `Saved ${p.companyName}`, tone: 'ok' });
+                } catch {
+                  setToast({ text: 'Could not save', tone: 'bad' });
+                }
+              }}>
                 <Icon name="star" /> {PERSONA_SAVE_CTA[persona]}
               </button>
-              {persona === 'freelancer' && (
-                <button className="btn btn-secondary btn-sm" onClick={() => navigator.clipboard?.writeText(`${p.companyName}\n#${p.companyNumber}\n${p.registeredOffice?.line1 ?? ''}`)}>
+              {(persona === 'freelancer' || persona === 'agency') && (
+                <button className="btn btn-secondary btn-sm" onClick={() => {
+                  const block = [
+                    p.companyName,
+                    `Company no. ${p.companyNumber}`,
+                    p.registeredOffice?.line1,
+                    p.registeredOffice?.line2,
+                    [p.registeredOffice?.locality, p.registeredOffice?.postalCode].filter(Boolean).join(', '),
+                    p.registeredOffice?.country,
+                  ].filter(Boolean).join('\n');
+                  navigator.clipboard?.writeText(block).then(() => setToast({ text: 'Invoice block copied to clipboard', tone: 'ok' }));
+                }}>
                   <Icon name="copy" /> Copy invoice block
                 </button>
               )}

@@ -20,7 +20,6 @@ export function MarketingNav() {
           <NavLink to="/pricing" className={({ isActive }) => (isActive ? 'active' : '')}>Pricing</NavLink>
         </nav>
         <div className="nav-cta">
-          <Link className="btn btn-ghost btn-sm" to="/sign-in">Sign in</Link>
           <Link className="btn btn-primary btn-sm" to="/app/search">
             Check a company
             <Icon name="arrow-right" />

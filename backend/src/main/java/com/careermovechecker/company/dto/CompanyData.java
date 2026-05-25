@@ -22,7 +22,7 @@ public record CompanyData(
         List<InsolvencyCase> insolvency
 ) {
     public record Address(String line1, String line2, String locality, String region, String postalCode, String country) {}
-    public record Officer(String name, String role, LocalDate appointedOn, LocalDate resignedOn, String nationality, String occupation) {}
+    public record Officer(String name, String role, LocalDate appointedOn, LocalDate resignedOn, String nationality, String occupation, String officerId) {}
     public record PscEntry(String name, String kind, List<String> natureOfControl, LocalDate notifiedOn, LocalDate ceasedOn) {}
     public record Charge(String id, String status, LocalDate createdOn, LocalDate deliveredOn, String description, List<String> personsEntitled) {}
     public record FilingEntry(String id, LocalDate date, String type, String description, String category) {}

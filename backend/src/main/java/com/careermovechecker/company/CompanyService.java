@@ -4,6 +4,7 @@ import com.careermovechecker.analytics.CompanyReportView;
 import com.careermovechecker.analytics.CompanyReportViewRepository;
 import com.careermovechecker.companieshouse.CompaniesHouseClient;
 import com.careermovechecker.companieshouse.CompaniesHouseMapper;
+import com.careermovechecker.companieshouse.DirectorTrackRecordService;
 import com.careermovechecker.companieshouse.DisqualificationService;
 import com.careermovechecker.company.dto.CompanyData;
 import com.careermovechecker.company.dto.CompanyReportDto;
@@ -36,6 +37,7 @@ public class CompanyService {
     private final CompanyReportViewRepository views;
     private final RiskScoringService scoring;
     private final DisqualificationService disqService;
+    private final DirectorTrackRecordService trackService;
     private final ObjectMapper json;
 
     public CompanyService(CompaniesHouseClient ch,
@@ -45,6 +47,7 @@ public class CompanyService {
                           CompanyReportViewRepository views,
                           RiskScoringService scoring,
                           DisqualificationService disqService,
+                          DirectorTrackRecordService trackService,
                           ObjectMapper json) {
         this.ch = ch;
         this.mapper = mapper;
@@ -53,6 +56,7 @@ public class CompanyService {
         this.views = views;
         this.scoring = scoring;
         this.disqService = disqService;
+        this.trackService = trackService;
         this.json = json;
     }
 
@@ -69,7 +73,8 @@ public class CompanyService {
                 CompanyData data = rehydrateFromSnapshots(companyNumber);
                 if (data == null) return Optional.of(toDto(cached.get()));
                 var disq = disqService.check(data);
-                return Optional.of(CompanyReportDto.fromEntity(cached.get(), data, disq, json));
+                var track = trackService.check(data);
+                return Optional.of(CompanyReportDto.fromEntity(cached.get(), data, disq, track, json));
             }
         }
         return compute(companyNumber, source);
@@ -146,7 +151,8 @@ public class CompanyService {
 
         logView(entity, source);
         var disq = disqService.check(data);
-        return Optional.of(CompanyReportDto.fromEntity(entity, data, disq, json));
+        var track = trackService.check(data);
+        return Optional.of(CompanyReportDto.fromEntity(entity, data, disq, track, json));
     }
 
     private boolean isFresh(CompanyRiskReport r) {

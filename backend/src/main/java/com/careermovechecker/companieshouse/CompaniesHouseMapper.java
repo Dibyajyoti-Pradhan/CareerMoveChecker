@@ -68,7 +68,8 @@ public class CompaniesHouseMapper {
                     date(item, "appointed_on"),
                     date(item, "resigned_on"),
                     text(item, "nationality"),
-                    text(item, "occupation")
+                    text(item, "occupation"),
+                    extractOfficerId(item)
             ));
         }
         return out;
@@ -132,6 +133,17 @@ public class CompaniesHouseMapper {
             ));
         }
         return out;
+    }
+
+    private String extractOfficerId(JsonNode item) {
+        // CH returns officer link as "/officers/{id}/appointments"
+        String url = item.path("links").path("officer").path("appointments").asText(null);
+        if (url == null) return null;
+        int start = url.indexOf("/officers/");
+        if (start < 0) return null;
+        int from = start + "/officers/".length();
+        int to = url.indexOf('/', from);
+        return to > from ? url.substring(from, to) : url.substring(from);
     }
 
     private LocalDate findInsolvencyStart(JsonNode caseNode) {

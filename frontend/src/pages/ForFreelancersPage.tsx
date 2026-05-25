@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { PersonaProvider } from '../lib/persona';
+import { WaitlistCTA } from '../components/WaitlistCTA';
 
 export function ForFreelancersPage() {
   return (
@@ -146,7 +147,7 @@ function Content() {
               </div>
             </div>
             <div className="right">
-              <Link className="btn btn-primary btn-lg" to="/pricing">Start Pro</Link>
+              <WaitlistCTA tier="Pro" ctaId="for-freelancers.tier" variant="primary" size="lg">Notify me when Pro launches</WaitlistCTA>
               <Link className="btn btn-secondary btn-lg" to="/app/search">Try a free check first</Link>
             </div>
           </div>

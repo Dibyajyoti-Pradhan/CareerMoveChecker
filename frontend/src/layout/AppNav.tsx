@@ -39,13 +39,7 @@ export function AppNav({ unreadAlerts = 0 }: { unreadAlerts?: number }) {
           )}
         </nav>
         <div className="nav-cta">
-          <span className="quota">
-            {persona === 'candidate' ? <><b>3</b> of 5 free checks left</> : <><b>{persona === 'freelancer' ? 'Pro' : 'Agency'}</b> · unlimited</>}
-          </span>
-          <Link className="av-pill" to="/account" aria-label="Account">
-            <span className="av">DP</span>
-            <span>Account</span>
-          </Link>
+          <Link className="btn btn-ghost btn-sm" to="/" style={{ color: 'var(--muted)' }}>← Back to site</Link>
         </div>
       </div>
     </header>

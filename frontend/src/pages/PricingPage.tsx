@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { PersonaSwitch, usePersona } from '../lib/persona';
 import { cn } from '../lib/cn';
+import { WaitlistCTA } from '../components/WaitlistCTA';
 
 const PLANS = [
   {
@@ -104,7 +105,13 @@ export function PricingPage() {
                     <li key={f}><Icon name="check" size={14} />{f}</li>
                   ))}
                 </ul>
-                <Link className={`btn btn-${p.variant} cta`} to={p.ctaTo}>{p.cta}</Link>
+                {p.id === 'free' ? (
+                  <Link className="btn btn-secondary cta" to="/app/search">Try free — no sign-up</Link>
+                ) : p.id === 'pro' ? (
+                  <WaitlistCTA tier="Pro" ctaId="pricing.pro" variant="primary" className="cta" block>Notify me when Pro launches</WaitlistCTA>
+                ) : (
+                  <WaitlistCTA tier="Agency" ctaId="pricing.agency" variant="secondary" className="cta" block>Talk to us about Agency</WaitlistCTA>
+                )}
               </div>
             ))}
           </div>

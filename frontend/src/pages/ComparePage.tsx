@@ -1,9 +1,9 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { PersonaSwitch, usePersona } from '../lib/persona';
 import { api } from '../api/client';
-import type { CompanyReport } from '../types';
+import type { CompanyReport, CompanySearchHit } from '../types';
 import { crestInitials, formatDate, yearsSince } from '../lib/format';
 import { cn } from '../lib/cn';
 import { HERO_QUESTION } from '../lib/persona-copy';
@@ -26,12 +26,40 @@ export function ComparePage() {
     setParams(numbers.length ? { numbers: numbers.join(',') } : {});
   }, [numbers.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const add = (e: FormEvent) => {
-    e.preventDefault();
-    const n = input.trim();
+  const [suggestions, setSuggestions] = useState<CompanySearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debounce = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (debounce.current) window.clearTimeout(debounce.current);
+    const q = input.trim();
+    if (q.length < 2 || /^\d+$/.test(q)) {
+      setSuggestions([]);
+      return;
+    }
+    debounce.current = window.setTimeout(() => {
+      setSearching(true);
+      api.searchCompanies(q).then((r) => setSuggestions(r.slice(0, 6))).finally(() => setSearching(false));
+    }, 250);
+    return () => { if (debounce.current) window.clearTimeout(debounce.current); };
+  }, [input]);
+
+  const addNumber = (n: string) => {
     if (!n || numbers.includes(n) || numbers.length >= MAX) return;
     setNumbers([...numbers, n]);
     setInput('');
+    setSuggestions([]);
+  };
+
+  const add = (e: FormEvent) => {
+    e.preventDefault();
+    const n = input.trim();
+    if (!n) return;
+    if (/^\d+$/.test(n)) {
+      addNumber(n);
+    } else if (suggestions.length > 0) {
+      addNumber(suggestions[0].companyNumber);
+    }
   };
 
   const remove = (n: string) => setNumbers(numbers.filter((x) => x !== n));
@@ -54,13 +82,41 @@ export function ComparePage() {
 
       <div style={{ padding: '14px 0' }}><PersonaSwitch showLabel={false} /></div>
 
-      <form onSubmit={add} style={{ display: 'flex', gap: 8, marginBottom: 14, maxWidth: 480 }}>
-        <div className="input-prefix" style={{ flex: 1 }}>
-          <span className="pf"><Icon name="search" /></span>
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Add an 8-digit company number" />
-        </div>
-        <button className="btn btn-primary" type="submit" disabled={numbers.length >= MAX}>Add</button>
-      </form>
+      <div style={{ position: 'relative', maxWidth: 480, marginBottom: 14 }}>
+        <form onSubmit={add} style={{ display: 'flex', gap: 8 }}>
+          <div className="input-prefix" style={{ flex: 1 }}>
+            <span className="pf"><Icon name="search" /></span>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Add by company name or 8-digit number"
+            />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={numbers.length >= MAX}>Add</button>
+        </form>
+        {suggestions.length > 0 && (
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, right: 80, marginTop: 4,
+            background: '#fff', border: '1px solid var(--hair)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 10,
+            maxHeight: 280, overflow: 'auto',
+          }}>
+            {suggestions.map((h) => (
+              <button
+                key={h.companyNumber}
+                onClick={() => addNumber(h.companyNumber)}
+                disabled={numbers.includes(h.companyNumber)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 0, padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--hair)' }}
+                onMouseOver={(e) => (e.currentTarget.style.background = 'var(--canvas)')}
+                onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div style={{ fontWeight: 500, fontSize: 13.5 }}>{h.companyName}</div>
+                <div className="small muted mono">#{h.companyNumber} · {h.companyStatus}</div>
+              </button>
+            ))}
+          </div>
+        )}
+        {searching && <span className="small muted" style={{ position: 'absolute', right: 90, top: 12 }}>searching…</span>}
+      </div>
 
       <div className="question-strip">
         <h3>{HERO_QUESTION[persona]}</h3>

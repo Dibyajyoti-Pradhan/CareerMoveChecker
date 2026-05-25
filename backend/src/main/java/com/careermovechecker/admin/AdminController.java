@@ -14,6 +14,10 @@ import com.careermovechecker.observability.ExternalApiCallLogRepository;
 import com.careermovechecker.risk.RiskLevel;
 import com.careermovechecker.saved.SavedCompany;
 import com.careermovechecker.saved.SavedCompanyRepository;
+import com.careermovechecker.tracking.CtaClickRepository;
+import com.careermovechecker.tracking.PageViewRepository;
+import com.careermovechecker.waitlist.WaitlistRepository;
+import com.careermovechecker.waitlist.WaitlistSignup;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +42,9 @@ public class AdminController {
     private final KillSwitchService kills;
     private final AuditService audit;
     private final CompanyService companyService;
+    private final PageViewRepository pageViews;
+    private final CtaClickRepository ctaClicks;
+    private final WaitlistRepository waitlist;
 
     public AdminController(CompanySearchEventRepository searches,
                            CompanyReportViewRepository viewsRepo,
@@ -50,7 +57,10 @@ public class AdminController {
                            SettingsService settings,
                            KillSwitchService kills,
                            AuditService audit,
-                           CompanyService companyService) {
+                           CompanyService companyService,
+                           PageViewRepository pageViews,
+                           CtaClickRepository ctaClicks,
+                           WaitlistRepository waitlist) {
         this.searches = searches;
         this.viewsRepo = viewsRepo;
         this.feedback = feedback;
@@ -63,6 +73,85 @@ public class AdminController {
         this.kills = kills;
         this.audit = audit;
         this.companyService = companyService;
+        this.pageViews = pageViews;
+        this.ctaClicks = ctaClicks;
+        this.waitlist = waitlist;
+    }
+
+    // ============ DEMAND SIGNAL ============
+
+    @GetMapping("/funnel")
+    public Map<String, Object> funnel(@RequestParam(value = "range", defaultValue = "7d") String range) {
+        Instant since = parseRange(range, Instant.now());
+        long sessions = pageViews.countDistinctSessionsSince(since);
+        long landed = pageViews.countSessionsForPath("/", since);
+        long visitedPersonaPage = pageViews.countSessionsForPathPrefix("/for-%", since);
+        long visitedPricing = pageViews.countSessionsForPath("/pricing", since);
+        long visitedSearch = pageViews.countSessionsForPath("/app/search", since);
+        long visitedReport = pageViews.countSessionsForPathPrefix("/app/company/%", since);
+        long ctaWaitlist = ctaClicks.topCtas(since).stream()
+                .filter(c -> c.getCtaId() != null && c.getCtaId().startsWith("waitlist"))
+                .mapToLong(c -> c.getCnt()).sum();
+        long waitlistSignups = waitlist.countByCreatedAtAfter(since);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("range", range);
+        out.put("totalSessions", sessions);
+        out.put("steps", List.of(
+                Map.of("name", "Landed (/)", "sessions", landed),
+                Map.of("name", "Visited persona page", "sessions", visitedPersonaPage),
+                Map.of("name", "Visited pricing", "sessions", visitedPricing),
+                Map.of("name", "Ran a search", "sessions", visitedSearch),
+                Map.of("name", "Opened a report", "sessions", visitedReport),
+                Map.of("name", "Clicked waitlist CTA", "sessions", ctaWaitlist),
+                Map.of("name", "Submitted email", "sessions", waitlistSignups)
+        ));
+        out.put("topPaths", pageViews.topPaths(since, PageRequest.of(0, 15)));
+        out.put("topReferrers", pageViews.topReferrers(since));
+        out.put("topCtas", ctaClicks.topCtas(since));
+        out.put("pageViewsByDay", pageViews.byDay(since));
+        return out;
+    }
+
+    @GetMapping("/waitlist")
+    public Map<String, Object> waitlistList(@RequestParam(value = "page", defaultValue = "0") int page,
+                                            @RequestParam(value = "size", defaultValue = "100") int size) {
+        var p = waitlist.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("items", p.getContent());
+        out.put("page", p.getNumber());
+        out.put("size", p.getSize());
+        out.put("totalElements", p.getTotalElements());
+        out.put("totalPages", p.getTotalPages());
+        out.put("byTier", waitlist.countByTier());
+        out.put("byPersona", waitlist.countByPersona());
+        return out;
+    }
+
+    @GetMapping(value = "/waitlist.csv", produces = "text/csv")
+    public ResponseEntity<String> waitlistCsv() {
+        StringBuilder sb = new StringBuilder("email,persona,tier,role,referrer,landing_path,created_at\n");
+        for (WaitlistSignup w : waitlist.findAll()) {
+            sb.append(csv(w.getEmail())).append(',')
+              .append(csv(w.getPersona())).append(',')
+              .append(csv(w.getTier())).append(',')
+              .append(csv(w.getRole())).append(',')
+              .append(csv(w.getReferrer())).append(',')
+              .append(csv(w.getLandingPath())).append(',')
+              .append(csv(String.valueOf(w.getCreatedAt())))
+              .append('\n');
+        }
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=waitlist.csv")
+                .body(sb.toString());
+    }
+
+    private static String csv(String s) {
+        if (s == null) return "";
+        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+            return "\"" + s.replace("\"", "\"\"") + "\"";
+        }
+        return s;
     }
 
     // ============ OVERVIEW ============

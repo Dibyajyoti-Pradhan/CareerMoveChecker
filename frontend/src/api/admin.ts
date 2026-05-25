@@ -70,4 +70,8 @@ export const admin = {
   audit: (page = 0, size = 50) => req<any>(`/api/admin/audit?page=${page}&size=${size}`),
 
   feedback: (page = 0, size = 50) => req<any[]>(`/api/admin/feedback?page=${page}&size=${size}`),
+
+  funnel: (range = '7d') => req<any>(`/api/admin/funnel?range=${range}`),
+  waitlist: (page = 0, size = 100) => req<any>(`/api/admin/waitlist?page=${page}&size=${size}`),
+  waitlistCsvUrl: () => '/api/admin/waitlist.csv',
 };

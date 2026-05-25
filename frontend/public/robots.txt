@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /methodology
+Allow: /for-candidates
+Allow: /for-freelancers
+Allow: /for-agencies
+Disallow: /admin
+Disallow: /app/
+Disallow: /account
+Disallow: /sign-in
+
+Sitemap: https://careermovechecker.com/sitemap.xml

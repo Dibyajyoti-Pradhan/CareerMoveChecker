@@ -90,6 +90,11 @@ public class CompaniesHouseClient {
         return get("/search/disqualified-officers", Map.of("q", name, "items_per_page", "5"), null, "disqualified-search", true);
     }
 
+    public Optional<JsonNode> officerAppointments(String officerId) {
+        // 404 = officer id unknown (rare, treat as "no data")
+        return get("/officers/" + officerId + "/appointments", Map.of("items_per_page", "50"), null, "officer-appointments", true);
+    }
+
     private Optional<JsonNode> get(String path, Map<String, String> params, String companyNumber, String shortName) {
         return get(path, params, companyNumber, shortName, false);
     }

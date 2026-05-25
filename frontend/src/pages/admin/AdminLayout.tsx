@@ -6,16 +6,18 @@ import { cn } from '../../lib/cn';
 
 const NAV: { to: string; label: string; icon: any; ix: string }[] = [
   { to: '/admin', label: 'Overview', icon: 'home', ix: '01' },
-  { to: '/admin/api-health', label: 'API health', icon: 'alert', ix: '02' },
-  { to: '/admin/data-freshness', label: 'Data freshness', icon: 'refresh', ix: '03' },
-  { to: '/admin/alerts', label: 'CH data-quality', icon: 'warn', ix: '04' },
-  { to: '/admin/watch-alerts', label: 'Watch-list alerts', icon: 'bell', ix: '05' },
-  { to: '/admin/activity', label: 'Activity & users', icon: 'users', ix: '06' },
-  { to: '/admin/companies', label: 'Companies', icon: 'building', ix: '07' },
-  { to: '/admin/logs', label: 'CH call logs', icon: 'list', ix: '08' },
-  { to: '/admin/settings', label: 'Settings', icon: 'settings', ix: '09' },
-  { to: '/admin/kill-switches', label: 'Kill switches', icon: 'x', ix: '10' },
-  { to: '/admin/audit', label: 'Audit log', icon: 'lock', ix: '11' },
+  { to: '/admin/funnel', label: 'Demand funnel', icon: 'star', ix: '02' },
+  { to: '/admin/waitlist', label: 'Waitlist', icon: 'mail', ix: '03' },
+  { to: '/admin/api-health', label: 'API health', icon: 'alert', ix: '04' },
+  { to: '/admin/data-freshness', label: 'Data freshness', icon: 'refresh', ix: '05' },
+  { to: '/admin/alerts', label: 'CH data-quality', icon: 'warn', ix: '06' },
+  { to: '/admin/watch-alerts', label: 'Watch-list alerts', icon: 'bell', ix: '07' },
+  { to: '/admin/activity', label: 'Activity & users', icon: 'users', ix: '08' },
+  { to: '/admin/companies', label: 'Companies', icon: 'building', ix: '09' },
+  { to: '/admin/logs', label: 'CH call logs', icon: 'list', ix: '10' },
+  { to: '/admin/settings', label: 'Settings', icon: 'settings', ix: '11' },
+  { to: '/admin/kill-switches', label: 'Kill switches', icon: 'x', ix: '12' },
+  { to: '/admin/audit', label: 'Audit log', icon: 'lock', ix: '13' },
 ];
 
 export function AdminLayout() {

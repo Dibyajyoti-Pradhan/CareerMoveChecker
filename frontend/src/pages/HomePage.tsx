@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { PersonaSwitch, usePersona } from '../lib/persona';
+import { WaitlistCTA } from '../components/WaitlistCTA';
 
 const TRY_CHIPS = ['Monzo Bank Limited', 'Deliveroo Plc', 'Greggs Plc', '09446231'];
 
@@ -131,11 +132,15 @@ function AnswerCardPreview({ persona }: { persona: string }) {
             <Icon name="external" />
             See full report
           </Link>
-          <a className="btn btn-primary btn-sm" href="#pricing">
-            <span data-pf="candidate">Save for later</span>
-            <span data-pf="freelancer">Start Pro · £19/mo</span>
-            <span data-pf="agency">Talk to us about Agency</span>
-          </a>
+          <span data-pf="candidate">
+            <Link className="btn btn-primary btn-sm" to="/app/search">Run a free check</Link>
+          </span>
+          <span data-pf="freelancer">
+            <WaitlistCTA tier="Pro" ctaId="home.answer-card.pro" variant="primary" size="sm">Notify me when Pro launches</WaitlistCTA>
+          </span>
+          <span data-pf="agency">
+            <WaitlistCTA tier="Agency" ctaId="home.answer-card.agency" variant="primary" size="sm">Talk to us about Agency</WaitlistCTA>
+          </span>
         </div>
       </div>
     </div>
@@ -304,19 +309,19 @@ function PricingPreview() {
             name="Free" price="£0" period="/ month"
             for_={<>For <b>job candidates</b> running a check before signing the offer.</>}
             features={['5 checks per month', 'Save up to 3 companies', 'Plain-English verdict & flags', 'Mobile-first single-page report']}
-            cta="Try free — no sign-up" ctaTo="/app/search" variant="secondary"
+            cta={<Link className="btn btn-secondary cta" to="/app/search">Try free — no sign-up</Link>}
           />
           <PlanCard
             name="Pro" price="£19" period="/ month" featured
             for_={<>For <b>freelancers</b> checking every new client — and re-checking when something feels off.</>}
             features={['Unlimited checks', 'Saved client list with notes', 'Compare up to 3 clients side by side', 'Refresh on demand', 'Invoice block copy']}
-            cta="Start Pro" ctaTo="/pricing" variant="primary"
+            cta={<WaitlistCTA tier="Pro" ctaId="home.pricing.pro" variant="primary" className="cta" block>Notify me when Pro launches</WaitlistCTA>}
           />
           <PlanCard
             name="Agency" price="£79" period="/ month"
             for_={<>For <b>recruitment teams</b> placing candidates and protecting placement fees.</>}
             features={['Everything in Pro', 'Disqualified-officer cross-check', 'Bulk CSV check (50 clients)', 'Monitoring & change alerts', 'Team workspace & branded PDF']}
-            cta="Talk to us" ctaTo="/pricing" variant="secondary"
+            cta={<WaitlistCTA tier="Agency" ctaId="home.pricing.agency" variant="secondary" className="cta" block>Talk to us about Agency</WaitlistCTA>}
           />
         </div>
       </div>
@@ -330,14 +335,12 @@ interface PlanCardProps {
   period: string;
   for_: React.ReactNode;
   features: string[];
-  cta: string;
-  ctaTo: string;
-  variant: 'primary' | 'secondary';
+  cta: React.ReactNode;
   featured?: boolean;
   recommended?: boolean;
 }
 
-export function PlanCard({ name, price, period, for_, features, cta, ctaTo, variant, featured, recommended }: PlanCardProps) {
+export function PlanCard({ name, price, period, for_, features, cta, featured, recommended }: PlanCardProps) {
   return (
     <div className={'plan' + (featured ? ' featured' : '') + (recommended ? ' recommended' : '')}>
       <div className="name">{name}</div>
@@ -348,7 +351,7 @@ export function PlanCard({ name, price, period, for_, features, cta, ctaTo, vari
           <li key={f}><Icon name="check" size={14} />{f}</li>
         ))}
       </ul>
-      <Link className={`btn btn-${variant} cta`} to={ctaTo}>{cta}</Link>
+      {cta}
     </div>
   );
 }

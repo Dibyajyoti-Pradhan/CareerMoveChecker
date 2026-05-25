@@ -28,6 +28,8 @@ import { AdminLogs } from '../pages/admin/AdminLogs';
 import { AdminSettings } from '../pages/admin/AdminSettings';
 import { AdminKillSwitches } from '../pages/admin/AdminKillSwitches';
 import { AdminAudit } from '../pages/admin/AdminAudit';
+import { AdminFunnel } from '../pages/admin/AdminFunnel';
+import { AdminWaitlist } from '../pages/admin/AdminWaitlist';
 
 function withPersona(node: React.ReactNode) {
   return <PersonaProvider>{node}</PersonaProvider>;
@@ -71,6 +73,8 @@ export const router = createBrowserRouter([
     element: withPersona(<AdminLayout />),
     children: [
       { index: true, element: <AdminOverview /> },
+      { path: 'funnel', element: <AdminFunnel /> },
+      { path: 'waitlist', element: <AdminWaitlist /> },
       { path: 'api-health', element: <AdminApiHealth /> },
       { path: 'data-freshness', element: <AdminDataFreshness /> },
       { path: 'alerts', element: <AdminAlertsQueue /> },

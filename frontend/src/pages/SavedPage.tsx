@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { PersonaSwitch, usePersona } from '../lib/persona';
 import { api } from '../api/client';
 import { SAVED_TITLE_EM, SAVED_SUB, SAVED_STAT_LABEL, SAVED_FILTER_LABEL } from '../lib/persona-copy';
-import type { SavedCompany } from '../types';
+import type { CompanyReport, SavedCompany, RiskLevel } from '../types';
 import { crestInitials, formatDate, relativeTime } from '../lib/format';
 import { cn } from '../lib/cn';
 
 const FILTERS = ['all', 'safe', 'watch', 'red'] as const;
+
+type Bucket = 'safe' | 'watch' | 'red' | 'unknown';
 
 export function SavedPage() {
   const { persona } = usePersona();
@@ -17,14 +19,40 @@ export function SavedPage() {
   const [filter, setFilter] = useState<typeof FILTERS[number]>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
 
   useEffect(() => {
-    api.listSaved().then((r) => { setItems(r); setLoading(false); }).catch(() => setLoading(false));
+    api.listSaved().then(async (r) => {
+      setItems(r);
+      setLoading(false);
+      // Fetch reports for each saved company so we can show real verdicts
+      const pairs = await Promise.all(
+        r.map(async (s) => [s.companyNumber, await api.getReport(s.companyNumber).catch(() => null)] as const)
+      );
+      setReports(Object.fromEntries(pairs));
+    }).catch(() => setLoading(false));
   }, []);
 
-  const filtered = items.filter((s) =>
-    !search.trim() || s.companyName.toLowerCase().includes(search.toLowerCase()) || s.companyNumber.includes(search)
-  );
+  const bucketFor = (n: string): Bucket => {
+    const r = reports[n];
+    if (!r) return 'unknown';
+    const lvl: RiskLevel = r.assessment.riskLevel;
+    if (lvl === 'LOW') return 'safe';
+    if (lvl === 'CRITICAL') return 'red';
+    return 'watch';
+  };
+
+  const counts = useMemo(() => {
+    const c = { safe: 0, watch: 0, red: 0, unknown: 0 };
+    items.forEach((s) => { c[bucketFor(s.companyNumber)]++; });
+    return c;
+  }, [items, reports]);
+
+  const filtered = items.filter((s) => {
+    if (search.trim() && !(s.companyName.toLowerCase().includes(search.toLowerCase()) || s.companyNumber.includes(search))) return false;
+    if (filter === 'all') return true;
+    return bucketFor(s.companyNumber) === filter;
+  });
 
   const remove = async (n: string) => {
     await api.removeSaved(n).catch(() => {});
@@ -57,9 +85,9 @@ export function SavedPage() {
 
       <div className="stats">
         <div className="stat"><span className="label">Total saved</span><span className="val">{items.length}</span></div>
-        <div className="stat"><span className="label">{SAVED_STAT_LABEL[persona]}</span><span className="val ok">{Math.max(0, items.length - 2)}</span></div>
-        <div className="stat"><span className="label">Watch closely</span><span className="val warn">1</span></div>
-        <div className="stat"><span className="label">Red flags</span><span className="val bad">1</span></div>
+        <div className="stat"><span className="label">{SAVED_STAT_LABEL[persona]}</span><span className="val ok">{counts.safe}</span></div>
+        <div className="stat"><span className="label">Watch closely</span><span className="val warn">{counts.watch}</span></div>
+        <div className="stat"><span className="label">Red flags</span><span className="val bad">{counts.red}</span></div>
       </div>
 
       <div className="alerts-card">
@@ -109,7 +137,16 @@ export function SavedPage() {
         {!loading && filtered.length === 0 && (
           <div className="empty" style={{ margin: 18 }}>No saved companies yet. <Link to="/app/search" style={{ color: 'var(--brand)' }}>Add one →</Link></div>
         )}
-        {!loading && filtered.map((s) => (
+        {!loading && filtered.map((s) => {
+          const r = reports[s.companyNumber];
+          const bucket = bucketFor(s.companyNumber);
+          const pillStyle = bucket === 'safe' ? { background: 'var(--ok-bg)', color: 'var(--ok)' }
+            : bucket === 'red' ? { background: 'var(--bad-bg)', color: 'var(--bad)' }
+            : bucket === 'watch' ? { background: 'var(--warn-bg)', color: 'var(--warn)' }
+            : { background: 'var(--soft)', color: 'var(--muted)' };
+          const pillText = bucket === 'safe' ? 'OK' : bucket === 'red' ? 'AVOID' : bucket === 'watch' ? 'WATCH' : '...';
+          const status = r?.profile?.companyStatus ?? '—';
+          return (
           <div key={s.companyNumber} className="srow">
             <input type="checkbox" checked={selected.has(s.companyNumber)} onChange={() => toggle(s.companyNumber)} />
             <div className="co">
@@ -119,19 +156,27 @@ export function SavedPage() {
                 <div className="small muted mono">#{s.companyNumber} · saved {formatDate(s.createdAt)}</div>
               </div>
             </div>
-            <span className="badge badge-ok"><span className="dot" />Active</span>
+            <span className={cn('badge', status === 'active' ? 'badge-ok' : status === '—' ? 'badge-neutral' : 'badge-bad')}>
+              <span className="dot" />{status}
+            </span>
             <div>
-              <span className="v-pill" style={{ background: 'var(--ok-bg)', color: 'var(--ok)' }}>YES</span>
-              <span className="small">Strong signals.</span>
+              <span className="v-pill" style={pillStyle}>{pillText}</span>
+              <span className="small">{r ? `${r.assessment.score}/100` : 'loading'}</span>
             </div>
-            <span className="change ok">+ Filings on time</span>
+            <span className={cn('change', bucket === 'safe' ? 'ok' : bucket === 'red' ? 'bad' : 'warn')}>
+              {r?.assessment.riskLevel ?? '—'}
+            </span>
             <div className="actions">
               <Link to={`/app/company/${s.companyNumber}`} className="icon-btn" title="Open"><Icon name="external" size={14} /></Link>
-              <button className="icon-btn" title="Refresh"><Icon name="refresh" size={14} /></button>
+              <button className="icon-btn" title="Refresh" onClick={async () => {
+                const fresh = await api.refreshReport(s.companyNumber).catch(() => null);
+                setReports((cur) => ({ ...cur, [s.companyNumber]: fresh }));
+              }}><Icon name="refresh" size={14} /></button>
               <button className="icon-btn" onClick={() => remove(s.companyNumber)} title="Remove"><Icon name="trash" size={14} /></button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
