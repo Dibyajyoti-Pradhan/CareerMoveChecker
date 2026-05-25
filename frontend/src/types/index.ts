@@ -103,6 +103,18 @@ export interface RiskAssessment {
   confidence: number;
 }
 
+export interface DisqualificationMatch {
+  name: string;
+  reason?: string;
+  disqualifiedFrom?: string;
+  disqualifiedUntil?: string;
+}
+
+export interface DisqualificationCheck {
+  status: 'CLEAR' | 'MATCH' | 'ERROR';
+  matches: DisqualificationMatch[];
+}
+
 export interface CompanyReport {
   profile: CompanyProfile;
   assessment: RiskAssessment;
@@ -111,8 +123,28 @@ export interface CompanyReport {
   charges: Charge[];
   filings: FilingEntry[];
   insolvency: InsolvencyCase[];
+  disqualificationCheck?: DisqualificationCheck;
   dataFetchedAt: string;
   computedAt: string;
+}
+
+export interface FeedAlertDto {
+  id: number;
+  companyNumber: string;
+  companyName: string;
+  severity: 'bad' | 'warn' | 'ok' | 'info';
+  alertType: string;
+  title: string;
+  description: string;
+  meansByPersona: { candidate: string; freelancer: string; agency: string };
+  unread: boolean;
+  when: string;
+}
+
+export interface FeedResponse {
+  groups: { day: string; items: FeedAlertDto[] }[];
+  unread: number;
+  totalCount: number;
 }
 
 export interface SavedCompany {

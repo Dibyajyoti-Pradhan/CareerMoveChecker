@@ -82,6 +82,10 @@ public class CompaniesHouseClient {
         return get("/company/" + companyNumber + "/insolvency", Map.of(), companyNumber, "insolvency");
     }
 
+    public Optional<JsonNode> searchDisqualifiedOfficers(String name) {
+        return get("/search/disqualified-officers", Map.of("q", name, "items_per_page", "5"), null, "disqualified-search");
+    }
+
     private Optional<JsonNode> get(String path, Map<String, String> params, String companyNumber, String shortName) {
         String endpoint = endpointName(path, companyNumber);
         if (props.getApiKey() == null || props.getApiKey().isBlank()) {

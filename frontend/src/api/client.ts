@@ -2,6 +2,7 @@ import type {
   CompanyReport,
   CompanySearchHit,
   DownstreamAlert,
+  FeedResponse,
   SavedCompany,
   BulkResult,
 } from '../types';
@@ -70,6 +71,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ companyNumbers: numbers }),
     }),
+
+  alertsFeed: () => http<FeedResponse>('/api/alerts'),
+  alertsMarkAllRead: () => http<void>('/api/alerts/mark-all-read', { method: 'POST' }),
+  alertsMarkRead: (id: number) => http<void>(`/api/alerts/${id}/read`, { method: 'POST' }),
 
   adminSummary: (adminPassword: string) =>
     fetch('/api/admin/summary', {

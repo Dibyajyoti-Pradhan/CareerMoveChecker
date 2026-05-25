@@ -4,6 +4,7 @@ import com.careermovechecker.analytics.CompanyReportView;
 import com.careermovechecker.analytics.CompanyReportViewRepository;
 import com.careermovechecker.companieshouse.CompaniesHouseClient;
 import com.careermovechecker.companieshouse.CompaniesHouseMapper;
+import com.careermovechecker.companieshouse.DisqualificationService;
 import com.careermovechecker.company.dto.CompanyData;
 import com.careermovechecker.company.dto.CompanyReportDto;
 import com.careermovechecker.company.dto.CompanySearchHitDto;
@@ -34,6 +35,7 @@ public class CompanyService {
     private final CompanyRiskReportRepository reports;
     private final CompanyReportViewRepository views;
     private final RiskScoringService scoring;
+    private final DisqualificationService disqService;
     private final ObjectMapper json;
 
     public CompanyService(CompaniesHouseClient ch,
@@ -42,6 +44,7 @@ public class CompanyService {
                           CompanyRiskReportRepository reports,
                           CompanyReportViewRepository views,
                           RiskScoringService scoring,
+                          DisqualificationService disqService,
                           ObjectMapper json) {
         this.ch = ch;
         this.mapper = mapper;
@@ -49,6 +52,7 @@ public class CompanyService {
         this.reports = reports;
         this.views = views;
         this.scoring = scoring;
+        this.disqService = disqService;
         this.json = json;
     }
 
@@ -62,10 +66,41 @@ public class CompanyService {
             Optional<CompanyRiskReport> cached = reports.findByCompanyNumber(companyNumber);
             if (cached.isPresent() && isFresh(cached.get())) {
                 logView(cached.get(), source);
-                return Optional.of(toDto(cached.get()));
+                CompanyData data = rehydrateFromSnapshots(companyNumber);
+                if (data == null) return Optional.of(toDto(cached.get()));
+                var disq = disqService.check(data);
+                return Optional.of(CompanyReportDto.fromEntity(cached.get(), data, disq, json));
             }
         }
         return compute(companyNumber, source);
+    }
+
+    private CompanyData rehydrateFromSnapshots(String companyNumber) {
+        try {
+            JsonNode profile = readSnapshot(companyNumber, CompanyRawSnapshot.SourceType.PROFILE);
+            if (profile == null) return null;
+            JsonNode officers = readSnapshot(companyNumber, CompanyRawSnapshot.SourceType.OFFICERS);
+            JsonNode psc = readSnapshot(companyNumber, CompanyRawSnapshot.SourceType.PSC);
+            JsonNode charges = readSnapshot(companyNumber, CompanyRawSnapshot.SourceType.CHARGES);
+            JsonNode filings = readSnapshot(companyNumber, CompanyRawSnapshot.SourceType.FILING_HISTORY);
+            JsonNode insolvency = readSnapshot(companyNumber, CompanyRawSnapshot.SourceType.INSOLVENCY);
+            return mapper.buildCompanyData(companyNumber, profile, officers, psc, charges, filings, insolvency);
+        } catch (Exception e) {
+            log.warn("Failed to rehydrate from snapshots for {}", companyNumber, e);
+            return null;
+        }
+    }
+
+    private JsonNode readSnapshot(String companyNumber, CompanyRawSnapshot.SourceType type) {
+        return snapshots.findFirstByCompanyNumberAndSourceTypeOrderByFetchedAtDesc(companyNumber, type)
+                .map(snap -> {
+                    try {
+                        return json.readTree(snap.getRawJson());
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
     }
 
     private Optional<CompanyReportDto> compute(String companyNumber, String source) {
@@ -110,7 +145,8 @@ public class CompanyService {
         reports.save(entity);
 
         logView(entity, source);
-        return Optional.of(toDto(entity, data));
+        var disq = disqService.check(data);
+        return Optional.of(CompanyReportDto.fromEntity(entity, data, disq, json));
     }
 
     private boolean isFresh(CompanyRiskReport r) {

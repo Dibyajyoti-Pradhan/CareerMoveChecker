@@ -1,6 +1,7 @@
 package com.careermovechecker.company.dto;
 
 import com.careermovechecker.company.CompanyRiskReport;
+import com.careermovechecker.companieshouse.DisqualificationService;
 import com.careermovechecker.risk.RecommendedAction;
 import com.careermovechecker.risk.RiskFlag;
 import com.careermovechecker.risk.RiskLevel;
@@ -19,6 +20,7 @@ public record CompanyReportDto(
         List<CompanyData.Charge> charges,
         List<CompanyData.FilingEntry> filings,
         List<CompanyData.InsolvencyCase> insolvency,
+        DisqualificationService.DisqualificationCheck disqualificationCheck,
         Instant dataFetchedAt,
         Instant computedAt
 ) {
@@ -38,6 +40,10 @@ public record CompanyReportDto(
     ) {}
 
     public static CompanyReportDto fromEntity(CompanyRiskReport r, CompanyData data, ObjectMapper json) {
+        return fromEntity(r, data, null, json);
+    }
+
+    public static CompanyReportDto fromEntity(CompanyRiskReport r, CompanyData data, DisqualificationService.DisqualificationCheck disq, ObjectMapper json) {
         List<String> reasons = parse(json, r.getTopReasonsJson(), new TypeReference<>() {});
         List<RiskFlag> flags = parse(json, r.getFlagsJson(), new TypeReference<>() {});
         List<RecommendedAction> actions = parse(json, r.getRecommendedActionsJson(), new TypeReference<>() {});
@@ -71,6 +77,7 @@ public record CompanyReportDto(
                 data == null ? List.of() : data.charges(),
                 data == null ? List.of() : data.filings(),
                 data == null ? List.of() : data.insolvency(),
+                disq,
                 r.getDataFetchedAt(), r.getComputedAt()
         );
     }

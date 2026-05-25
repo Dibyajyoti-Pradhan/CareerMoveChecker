@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .csrf(c -> c.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/alerts/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll())
                 .httpBasic(b -> {})
                 .formLogin(f -> f.disable());

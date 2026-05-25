@@ -135,10 +135,12 @@ export function CompanyReportPage() {
       <section className="zone-b">
         <div className="answer-card">
           <div className="answer-body">
-            {persona === 'agency' && (
-              <div className="disq-banner">
-                <Icon name="shield" />
-                No disqualified officers detected on the current board.
+            {persona === 'agency' && report.disqualificationCheck && (
+              <div className={cn('disq-banner', report.disqualificationCheck.status === 'MATCH' && 'bad')}>
+                <Icon name={report.disqualificationCheck.status === 'MATCH' ? 'alert' : 'shield'} />
+                {report.disqualificationCheck.status === 'MATCH'
+                  ? `⚠ ${report.disqualificationCheck.matches.length} disqualified officer(s) detected on the current board: ${report.disqualificationCheck.matches.map((m) => m.name).join(', ')}.`
+                  : 'No disqualified officers detected on the current board.'}
               </div>
             )}
 
