@@ -53,4 +53,17 @@ public interface PageViewRepository extends JpaRepository<PageViewEvent, Long> {
         String getReferrer();
         long getCnt();
     }
+
+    @Query("SELECT v.persona as persona, COUNT(DISTINCT v.anonymousSessionId) as uniques " +
+            "FROM PageViewEvent v WHERE v.createdAt > :since GROUP BY v.persona")
+    List<PersonaRow> uniquesByPersona(@Param("since") Instant since);
+
+    interface PersonaRow {
+        String getPersona();
+        long getUniques();
+    }
+
+    @Query("SELECT AVG(c.cnt) FROM (SELECT COUNT(v) as cnt FROM PageViewEvent v " +
+            "WHERE v.createdAt > :since GROUP BY v.anonymousSessionId) c")
+    Double avgPagesPerSession(@Param("since") Instant since);
 }

@@ -113,6 +113,42 @@ public class AdminController {
         return out;
     }
 
+    @GetMapping("/visitors")
+    public Map<String, Object> visitors(@RequestParam(value = "range", defaultValue = "30d") String range) {
+        Instant now = Instant.now();
+        Instant since = parseRange(range, now);
+        Instant today = now.minus(Duration.ofHours(24));
+        Instant d7 = now.minus(Duration.ofDays(7));
+        Instant d30 = now.minus(Duration.ofDays(30));
+
+        long uniquesToday = pageViews.countDistinctSessionsSince(today);
+        long uniques7d = pageViews.countDistinctSessionsSince(d7);
+        long uniques30d = pageViews.countDistinctSessionsSince(d30);
+        long uniquesInRange = pageViews.countDistinctSessionsSince(since);
+
+        long viewsInRange = pageViews.countByCreatedAtAfter(since);
+        long newVisitorsInRange = pageViews.countFirstVisitsSince(since);
+        long returningInRange = Math.max(0, uniquesInRange - newVisitorsInRange);
+
+        Double avgPages = pageViews.avgPagesPerSession(since);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("range", range);
+        out.put("uniquesToday", uniquesToday);
+        out.put("uniques7d", uniques7d);
+        out.put("uniques30d", uniques30d);
+        out.put("uniquesInRange", uniquesInRange);
+        out.put("viewsInRange", viewsInRange);
+        out.put("newVisitorsInRange", newVisitorsInRange);
+        out.put("returningInRange", returningInRange);
+        out.put("avgPagesPerSession", avgPages == null ? 0 : Math.round(avgPages * 10) / 10.0);
+        out.put("byDay", pageViews.byDay(since));
+        out.put("topPaths", pageViews.topPaths(since, PageRequest.of(0, 15)));
+        out.put("topReferrers", pageViews.topReferrers(since));
+        out.put("uniquesByPersona", pageViews.uniquesByPersona(since));
+        return out;
+    }
+
     @GetMapping("/waitlist")
     public Map<String, Object> waitlistList(@RequestParam(value = "page", defaultValue = "0") int page,
                                             @RequestParam(value = "size", defaultValue = "100") int size) {
