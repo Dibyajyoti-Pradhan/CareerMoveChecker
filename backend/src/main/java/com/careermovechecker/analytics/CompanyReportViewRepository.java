@@ -23,4 +23,13 @@ public interface CompanyReportViewRepository extends JpaRepository<CompanyReport
         long getViews();
         RiskLevel getLevel();
     }
+
+    @Query(value = "SELECT TO_CHAR(date_trunc('day', created_at), 'YYYY-MM-DD') as day, COUNT(*) as cnt " +
+            "FROM company_report_views WHERE created_at > :since GROUP BY 1 ORDER BY 1", nativeQuery = true)
+    List<DailyRow> viewsByDay(@Param("since") Instant since);
+
+    interface DailyRow {
+        String getDay();
+        long getCnt();
+    }
 }

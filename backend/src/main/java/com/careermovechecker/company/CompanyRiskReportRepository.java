@@ -20,4 +20,21 @@ public interface CompanyRiskReportRepository extends JpaRepository<CompanyRiskRe
     }
 
     List<CompanyRiskReport> findTop10ByOrderByUpdatedAtDesc();
+
+    org.springframework.data.domain.Page<CompanyRiskReport> findAllByOrderByUpdatedAtDesc(org.springframework.data.domain.Pageable page);
+
+    @Query("SELECT " +
+            "COUNT(CASE WHEN r.dataFetchedAt > :h6  THEN 1 END) as fresh6h, " +
+            "COUNT(CASE WHEN r.dataFetchedAt > :h24 AND r.dataFetchedAt <= :h6  THEN 1 END) as fresh24h, " +
+            "COUNT(CASE WHEN r.dataFetchedAt > :d7  AND r.dataFetchedAt <= :h24 THEN 1 END) as fresh7d, " +
+            "COUNT(CASE WHEN r.dataFetchedAt <= :d7 THEN 1 END) as stale " +
+            "FROM CompanyRiskReport r")
+    FreshnessBuckets freshnessBuckets(Instant h6, Instant h24, Instant d7);
+
+    interface FreshnessBuckets {
+        long getFresh6h();
+        long getFresh24h();
+        long getFresh7d();
+        long getStale();
+    }
 }

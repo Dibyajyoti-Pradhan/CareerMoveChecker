@@ -16,7 +16,18 @@ import { ComparePage } from '../pages/ComparePage';
 import { AlertsPage } from '../pages/AlertsPage';
 import { BulkCheckPage } from '../pages/BulkCheckPage';
 import { AccountPage } from '../pages/AccountPage';
-import { AdminPage } from '../pages/AdminPage';
+import { AdminLayout } from '../pages/admin/AdminLayout';
+import { AdminOverview } from '../pages/admin/AdminOverview';
+import { AdminApiHealth } from '../pages/admin/AdminApiHealth';
+import { AdminDataFreshness } from '../pages/admin/AdminDataFreshness';
+import { AdminAlertsQueue } from '../pages/admin/AdminAlertsQueue';
+import { AdminWatchAlerts } from '../pages/admin/AdminWatchAlerts';
+import { AdminActivity } from '../pages/admin/AdminActivity';
+import { AdminCompanies } from '../pages/admin/AdminCompanies';
+import { AdminLogs } from '../pages/admin/AdminLogs';
+import { AdminSettings } from '../pages/admin/AdminSettings';
+import { AdminKillSwitches } from '../pages/admin/AdminKillSwitches';
+import { AdminAudit } from '../pages/admin/AdminAudit';
 
 function withPersona(node: React.ReactNode) {
   return <PersonaProvider>{node}</PersonaProvider>;
@@ -54,6 +65,22 @@ export const router = createBrowserRouter([
   },
   // Account (separate so layout can use canvas bg)
   { path: '/account', element: withPersona(<AppLayout />), children: [{ index: true, element: <AccountPage /> }] },
-  // Admin (no shared layout — ops nav lives inside the page)
-  { path: '/admin', element: withPersona(<AdminPage />) },
+  // Admin (dark ops layout + persistent left rail)
+  {
+    path: '/admin',
+    element: withPersona(<AdminLayout />),
+    children: [
+      { index: true, element: <AdminOverview /> },
+      { path: 'api-health', element: <AdminApiHealth /> },
+      { path: 'data-freshness', element: <AdminDataFreshness /> },
+      { path: 'alerts', element: <AdminAlertsQueue /> },
+      { path: 'watch-alerts', element: <AdminWatchAlerts /> },
+      { path: 'activity', element: <AdminActivity /> },
+      { path: 'companies', element: <AdminCompanies /> },
+      { path: 'logs', element: <AdminLogs /> },
+      { path: 'settings', element: <AdminSettings /> },
+      { path: 'kill-switches', element: <AdminKillSwitches /> },
+      { path: 'audit', element: <AdminAudit /> },
+    ],
+  },
 ]);

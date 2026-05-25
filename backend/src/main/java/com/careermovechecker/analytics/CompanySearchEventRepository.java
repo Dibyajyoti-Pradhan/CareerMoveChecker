@@ -23,4 +23,23 @@ public interface CompanySearchEventRepository extends JpaRepository<CompanySearc
         String getNumber();
         long getCnt();
     }
+
+    @Query("SELECT e.normalizedQuery as query, COUNT(e) as cnt " +
+            "FROM CompanySearchEvent e WHERE e.resultCount = 0 AND e.createdAt > :since " +
+            "GROUP BY e.normalizedQuery ORDER BY COUNT(e) DESC")
+    List<NoResultRow> topNoResult(@Param("since") Instant since, org.springframework.data.domain.Pageable page);
+
+    interface NoResultRow {
+        String getQuery();
+        long getCnt();
+    }
+
+    @Query(value = "SELECT TO_CHAR(date_trunc('day', created_at), 'YYYY-MM-DD') as day, COUNT(*) as cnt " +
+            "FROM company_search_events WHERE created_at > :since GROUP BY 1 ORDER BY 1", nativeQuery = true)
+    List<DailyRow> searchesByDay(@Param("since") Instant since);
+
+    interface DailyRow {
+        String getDay();
+        long getCnt();
+    }
 }
