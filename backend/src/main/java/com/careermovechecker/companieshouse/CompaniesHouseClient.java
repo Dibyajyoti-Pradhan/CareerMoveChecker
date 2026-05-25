@@ -67,11 +67,13 @@ public class CompaniesHouseClient {
     }
 
     public Optional<JsonNode> psc(String companyNumber) {
-        return get("/company/" + companyNumber + "/persons-with-significant-control", Map.of(), companyNumber, "psc");
+        // 404 = no PSC entries declared (relatively common for small companies)
+        return get("/company/" + companyNumber + "/persons-with-significant-control", Map.of(), companyNumber, "psc", true);
     }
 
     public Optional<JsonNode> charges(String companyNumber) {
-        return get("/company/" + companyNumber + "/charges", Map.of(), companyNumber, "charges");
+        // 404 = no charges on file (normal for many companies)
+        return get("/company/" + companyNumber + "/charges", Map.of(), companyNumber, "charges", true);
     }
 
     public Optional<JsonNode> filingHistory(String companyNumber) {
@@ -79,14 +81,20 @@ public class CompaniesHouseClient {
     }
 
     public Optional<JsonNode> insolvency(String companyNumber) {
-        return get("/company/" + companyNumber + "/insolvency", Map.of(), companyNumber, "insolvency");
+        // 404 = no insolvency cases (the GOOD outcome for most companies)
+        return get("/company/" + companyNumber + "/insolvency", Map.of(), companyNumber, "insolvency", true);
     }
 
     public Optional<JsonNode> searchDisqualifiedOfficers(String name) {
-        return get("/search/disqualified-officers", Map.of("q", name, "items_per_page", "5"), null, "disqualified-search");
+        // 404 = name not on disqualified register (the GOOD outcome we want)
+        return get("/search/disqualified-officers", Map.of("q", name, "items_per_page", "5"), null, "disqualified-search", true);
     }
 
     private Optional<JsonNode> get(String path, Map<String, String> params, String companyNumber, String shortName) {
+        return get(path, params, companyNumber, shortName, false);
+    }
+
+    private Optional<JsonNode> get(String path, Map<String, String> params, String companyNumber, String shortName, boolean notFoundIsOk) {
         String endpoint = endpointName(path, companyNumber);
         if (props.getApiKey() == null || props.getApiKey().isBlank()) {
             recordLog(endpoint, companyNumber, 401, false, 0, "Missing COMPANIES_HOUSE_API_KEY");
@@ -116,8 +124,10 @@ public class CompaniesHouseClient {
         } catch (HttpClientErrorException ex) {
             int dur = (int) Duration.ofNanos(System.nanoTime() - start).toMillis();
             int code = ex.getStatusCode().value();
-            recordLog(endpoint, companyNumber, code, false, dur, ex.getMessage());
-            handleClientError(endpoint, companyNumber, ex.getStatusCode(), shortName);
+            // 404 on endpoints where "no records" is the expected normal response = success
+            boolean isExpected404 = code == 404 && notFoundIsOk;
+            recordLog(endpoint, companyNumber, code, isExpected404, dur, isExpected404 ? null : ex.getMessage());
+            if (!isExpected404) handleClientError(endpoint, companyNumber, ex.getStatusCode(), shortName);
             if (code == 404) return Optional.empty();
             throw new CompaniesHouseException(code, endpoint, ex.getMessage(), ex);
         } catch (HttpServerErrorException ex) {
