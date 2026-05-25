@@ -28,8 +28,8 @@ public class CompaniesHouseMapper {
         LocalDate incorp = date(profile, "date_of_creation");
         Boolean accountsOverdue = bool(profile.path("accounts").path("overdue"));
         Boolean confOverdue = bool(profile.path("confirmation_statement").path("overdue"));
-        LocalDate nextAccountsDue = date(profile.path("accounts").path("next_due"), null);
-        LocalDate lastAccountsMadeUpTo = date(profile.path("accounts").path("last_accounts").path("made_up_to"), null);
+        LocalDate nextAccountsDue = parseDate(profile.path("accounts").path("next_due"));
+        LocalDate lastAccountsMadeUpTo = parseDate(profile.path("accounts").path("last_accounts").path("made_up_to"));
         List<String> sic = arrayText(profile.path("sic_codes"));
 
         CompanyData.Address addr = parseAddress(profile.path("registered_office_address"));
@@ -174,10 +174,10 @@ public class CompaniesHouseMapper {
     }
 
     private static LocalDate date(JsonNode n, String field) {
-        return date(n == null ? null : n.get(field), null);
+        return parseDate(n == null ? null : n.get(field));
     }
 
-    private static LocalDate date(JsonNode v, Object _ignored) {
+    private static LocalDate parseDate(JsonNode v) {
         if (v == null || v.isNull() || v.isMissingNode()) return null;
         try {
             return LocalDate.parse(v.asText());

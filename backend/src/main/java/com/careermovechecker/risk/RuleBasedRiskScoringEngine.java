@@ -51,13 +51,20 @@ public class RuleBasedRiskScoringEngine implements RiskScoringEngine {
                     "Status indicates wind-up",
                     "Pause new commitments and consult the appointed officeholder."));
         }
-        if (sigIds.contains("insolvency.present") || sigIds.contains("filings.insolvency")) {
+        if (sigIds.contains("insolvency.present")) {
             score -= 50;
             reasons.add("Insolvency records on file");
             flags.add(new RiskFlag("insolvency", RiskFlag.Severity.CRITICAL, "Insolvency records",
                     "One or more insolvency events are recorded against this company.",
                     "Insolvency records present",
                     "Read filed insolvency documents before proceeding."));
+        } else if (sigIds.contains("filings.insolvency")) {
+            score -= 10;
+            reasons.add("Filing categorised as insolvency");
+            flags.add(new RiskFlag("insolvencyFiling", RiskFlag.Severity.INFO, "Insolvency-categorised filing",
+                    "A filing is categorised under \"insolvency\" at Companies House. This does not necessarily mean the company is insolvent — many legitimate filings carry this category. Review the filing history tab for context.",
+                    "1+ filing with category=insolvency",
+                    "Open the filing in the Filing history tab to confirm the nature."));
         }
         if (sigIds.contains("filings.strikeOff")) {
             score -= 30;

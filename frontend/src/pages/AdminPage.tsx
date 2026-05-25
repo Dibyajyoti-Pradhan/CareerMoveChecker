@@ -1,147 +1,157 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Icon } from '../components/Icon';
 import { api } from '../api/client';
-import type { AdminSummary, RiskLevel } from '../types';
-import { Card } from '../components/ui/Card';
-import { Skeleton } from '../components/ui/Skeleton';
-import { Badge } from '../components/ui/Badge';
-import { AdminMetricCard } from '../components/admin/AdminMetricCard';
-import { ApiHealthPanel } from '../components/admin/ApiHealthPanel';
-import { formatNumber, formatPercent } from '../lib/format';
-
-const riskTone: Record<RiskLevel, 'green' | 'amber' | 'red' | 'gray'> = {
-  LOW: 'green',
-  MODERATE: 'amber',
-  HIGH: 'amber',
-  CRITICAL: 'red',
-};
+import type { DownstreamAlert } from '../types';
+import { formatPct, relativeTime } from '../lib/format';
+import { cn } from '../lib/cn';
 
 export function AdminPage() {
-  const [s, setS] = useState<AdminSummary | null>(null);
+  const [pwd, setPwd] = useState(() => sessionStorage.getItem('cmc.admin') || '');
+  const [authed, setAuthed] = useState(Boolean(pwd));
+  const [error, setError] = useState(false);
+  const [summary, setSummary] = useState<any>(null);
+  const [alerts, setAlerts] = useState<DownstreamAlert[]>([]);
+  const [range, setRange] = useState<'1h' | '24h' | '7d' | '30d' | '90d'>('7d');
 
   useEffect(() => {
-    api.adminSummary().then(setS);
-  }, []);
+    if (!authed) return;
+    api.adminSummary(pwd).then((s) => { setSummary(s); setError(false); }).catch(() => { setError(true); setAuthed(false); });
+    api.adminAlerts(pwd).then(setAlerts).catch(() => setAlerts([]));
+  }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!s) {
+  if (!authed) {
     return (
-      <div className="container-page py-10 space-y-6">
-        <Skeleton className="h-10 w-1/3" />
-        <div className="grid gap-4 md:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+      <div className="wrap" style={{ paddingTop: 80, maxWidth: 440 }}>
+        <div className="panel-card">
+          <h3>Admin access</h3>
+          <p className="sub">Enter the admin password.</p>
+          <form onSubmit={(e) => { e.preventDefault(); sessionStorage.setItem('cmc.admin', pwd); setAuthed(true); }}>
+            <div className="field">
+              <input className={cn('input', error && 'input-error')} type="password" placeholder="Admin password" value={pwd} onChange={(e) => { setPwd(e.target.value); setError(false); }} autoFocus />
+              {error && <span className="small" style={{ color: 'var(--bad)' }}>Wrong password.</span>}
+            </div>
+            <button className="submit-btn">Unlock</button>
+          </form>
         </div>
       </div>
     );
   }
 
-  const totalRisk = (Object.values(s.riskDistribution) as number[]).reduce((a, b) => a + b, 0) || 1;
-
   return (
-    <div className="container-page py-10">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Admin</h1>
-          <p className="mt-2 text-muted">Usage, API health, and downstream data quality.</p>
+    <>
+      <header className="nav ops no-print">
+        <div className="wrap nav-inner">
+          <Link className="logo" to="/admin"><span className="mk">CM</span><span>CareerMoveChecker</span><span className="tag">ops</span></Link>
+          <nav className="app-tabs">
+            <a className="active"><Icon name="home" /><span>Overview</span></a>
+            <a><Icon name="alert" /><span>API health</span></a>
+            <a><Icon name="refresh" /><span>Data freshness</span></a>
+            <a><Icon name="bell" /><span>Alerts queue</span></a>
+            <a><Icon name="users" /><span>Users</span></a>
+            <a><Icon name="list" /><span>Logs</span></a>
+          </nav>
+          <div className="live-pill mono">{new Date().toISOString().slice(11, 19)} UTC</div>
         </div>
-        <Link
-          to="/admin/alerts"
-          className="inline-flex items-center gap-2 rounded-xl bg-risk-critBg text-risk-crit border border-red-200 px-4 h-10 font-semibold hover:bg-red-100"
-        >
-          <span className="h-2 w-2 rounded-full bg-risk-crit" /> {s.openAlerts} open alerts
-        </Link>
-      </div>
+      </header>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <AdminMetricCard label="Searches today" value={formatNumber(s.searchesToday)} />
-        <AdminMetricCard label="Searches (7d)" value={formatNumber(s.searches7d)} />
-        <AdminMetricCard label="Reports viewed (7d)" value={formatNumber(s.reportsViewed7d)} />
-        <AdminMetricCard label="Search → report rate" value={formatPercent(s.searchToReportConversion)} tone="good" />
-        <AdminMetricCard label="No-result searches (7d)" value={formatNumber(s.noResultSearches7d)} />
-        <AdminMetricCard label="API success (7d)" value={formatPercent(s.apiSuccessRate7d)} tone={s.apiSuccessRate7d >= 0.98 ? 'good' : 'bad'} />
-        <AdminMetricCard label="Avg API latency" value={`${s.avgApiLatencyMs} ms`} />
-        <AdminMetricCard label="API errors (7d)" value={formatNumber(s.errorCount7d)} tone={s.errorCount7d > 50 ? 'bad' : 'default'} />
-      </section>
-
-      <section className="mt-8 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <h2 className="text-base font-bold mb-4">Risk distribution (last 30d)</h2>
-          <div className="space-y-3">
-            {(Object.keys(s.riskDistribution) as RiskLevel[]).map((level) => {
-              const v = s.riskDistribution[level];
-              const pct = Math.round((v / totalRisk) * 100);
-              return (
-                <div key={level}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <Badge tone={riskTone[level]}>{level}</Badge>
-                    <span className="text-muted">{formatNumber(v)} ({pct}%)</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-soft overflow-hidden">
-                    <div
-                      className={`h-full ${
-                        level === 'LOW' ? 'bg-risk-low' :
-                        level === 'CRITICAL' ? 'bg-risk-crit' :
-                        'bg-amber-500'
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+      <div className="wrap" style={{ paddingTop: 24 }}>
+        <div className="page-head" style={{ border: 0, paddingBottom: 14 }}>
+          <div>
+            <h1 style={{ fontSize: 26 }}>Ops dashboard</h1>
+            <p className="sub">{summary?.openAlerts ?? 0} open data-quality alerts · API success {formatPct(summary?.apiSuccessRate7d ?? 1)}</p>
           </div>
-        </Card>
-        <ApiHealthPanel
-          successRate={s.apiSuccessRate7d}
-          avgLatencyMs={s.avgApiLatencyMs}
-          errorCount={s.errorCount7d}
-        />
-      </section>
+          <div className="head-actions">
+            <div className="range-pick" style={{ background: 'var(--soft)' }}>
+              {(['1h', '24h', '7d', '30d', '90d'] as const).map((r) => (
+                <button key={r} className={cn(range === r && 'active')} style={{ color: range === r ? 'var(--ink)' : 'var(--muted)' }} onClick={() => setRange(r)}>{r}</button>
+              ))}
+            </div>
+            <button className="btn btn-secondary btn-sm"><Icon name="refresh" /> Refresh</button>
+          </div>
+        </div>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="text-base font-bold mb-3">Top searched companies</h2>
-          <ul className="space-y-2">
-            {s.topSearched.map((t) => (
-              <li key={t.companyNumber} className="flex items-center justify-between gap-2">
-                <Link className="font-semibold hover:text-brand truncate" to={`/app/company/${t.companyNumber}`}>
-                  {t.companyName}
-                </Link>
-                <span className="text-sm text-muted">{t.count}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <h2 className="text-base font-bold mb-3">Top viewed reports</h2>
-          <ul className="space-y-2">
-            {s.topViewed.map((t) => (
-              <li key={t.companyNumber} className="flex items-center justify-between gap-2">
-                <Link className="font-semibold hover:text-brand truncate" to={`/app/company/${t.companyNumber}`}>
-                  {t.companyName}
-                </Link>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge tone={riskTone[t.riskLevel]}>{t.riskLevel}</Badge>
-                  <span className="text-sm text-muted">{t.views}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </section>
+        {summary?.openAlerts > 0 && (
+          <div className="status-banner warn">
+            <Icon name="warn" />
+            <span><b>{summary.openAlerts} open data-quality alerts.</b> Triage below.</span>
+          </div>
+        )}
 
-      <section className="mt-8">
-        <Card>
-          <h2 className="text-base font-bold mb-3">Feedback by use case (7d)</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {Object.entries(s.feedbackBreakdown).map(([k, v]) => (
-              <div key={k} className="rounded-2xl bg-soft p-3">
-                <div className="text-xs uppercase tracking-wide font-bold text-muted">{k.replaceAll('_', ' ')}</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(v as number)}</div>
+        <h4 className="label" style={{ margin: '24px 0 8px' }}>North-star metrics</h4>
+        <div className="kpis">
+          <Kpi label="Reports run (24h)" val={summary?.searchesToday ?? 0} delta="up" />
+          <Kpi label="Search → report" val={formatPct(summary?.searchToReportConversion ?? 0)} delta="up" target="met" targetLabel=">60%" />
+          <Kpi label="API success 7d" val={formatPct(summary?.apiSuccessRate7d ?? 1)} delta={summary?.apiSuccessRate7d >= 0.99 ? 'up' : 'down'} target={summary?.apiSuccessRate7d >= 0.99 ? 'met' : 'miss'} targetLabel=">99%" />
+          <Kpi label="Avg latency" val={`${summary?.avgApiLatencyMs ?? 0} ms`} delta="flat" />
+          <Kpi label="No-result rate" val={formatPct((summary?.noResultSearches7d ?? 0) / Math.max(1, summary?.searches7d ?? 1))} delta="down" />
+        </div>
+
+        <h4 className="label" style={{ margin: '24px 0 8px' }}>Business metrics</h4>
+        <div className="kpis">
+          <Kpi label="Searches 30d" val={summary?.searches30d ?? 0} delta="up" />
+          <Kpi label="Reports viewed 7d" val={summary?.reportsViewed7d ?? 0} delta="up" />
+          <Kpi label="API errors 7d" val={summary?.errorCount7d ?? 0} delta={(summary?.errorCount7d ?? 0) > 50 ? 'up' : 'flat'} />
+          <Kpi label="Open alerts" val={summary?.openAlerts ?? 0} delta="flat" />
+          <Kpi label="Risk: critical" val={summary?.riskDistribution?.CRITICAL ?? 0} delta="flat" />
+        </div>
+
+        <div className="two-col">
+          <div className="panel-card">
+            <h3>Companies House endpoint health</h3>
+            {[
+              { ep: '/search/companies', up: 100, p50: 280 },
+              { ep: '/company/{n}', up: 99, p50: 220 },
+              { ep: '/company/{n}/officers', up: 100, p50: 240 },
+              { ep: '/company/{n}/psc', up: 100, p50: 210 },
+              { ep: '/company/{n}/charges', up: 99, p50: 260 },
+              { ep: '/company/{n}/filing-history', up: 98, p50: 380 },
+              { ep: '/company/{n}/insolvency', up: 100, p50: 180 },
+            ].map((e) => (
+              <div key={e.ep} className="health-row">
+                <span className="ep">{e.ep}</span>
+                <span className="uptime-bar">{Array.from({ length: 40 }).map((_, i) => (
+                  <i key={i} className={i % 30 === 0 ? 'warn' : ''} />
+                ))}</span>
+                <span className="mono small">{e.up}%</span>
+                <span className="mono small">{e.p50}ms</span>
               </div>
             ))}
           </div>
-        </Card>
-      </section>
+
+          <div className="panel-card">
+            <h3>Data-quality alerts</h3>
+            {alerts.length === 0 && <div className="empty">No alerts. All quiet.</div>}
+            {alerts.slice(0, 5).map((a) => (
+              <div key={a.id} className={cn('ax', a.status === 'OPEN' && 'open', a.status === 'ACKNOWLEDGED' && 'ack', a.status === 'RESOLVED' && 'res')}>
+                <div className="head-row">
+                  <span className={cn('badge', a.severity === 'CRITICAL' ? 'badge-bad' : a.severity === 'WARNING' ? 'badge-warn' : 'badge-info')}>{a.severity}</span>
+                  <span className="badge badge-neutral">{a.status}</span>
+                  <h4>{a.title}</h4>
+                  <div className="row" style={{ marginLeft: 'auto' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => api.adminAlertAction(pwd, a.id, 'acknowledge')}>Ack</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => api.adminAlertAction(pwd, a.id, 'resolve')}>Resolve</button>
+                  </div>
+                </div>
+                <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted)' }}>{a.message}</p>
+                <div className="ev">{JSON.stringify(a.evidence)}</div>
+                <div className="meta">{a.endpoint} · {relativeTime(a.lastSeenAt)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Kpi({ label, val, delta, target, targetLabel }: { label: string; val: any; delta?: 'up' | 'down' | 'flat'; target?: 'met' | 'miss'; targetLabel?: string }) {
+  return (
+    <div className="kpi">
+      <span className="label">{label}</span>
+      <div className="val">{val}</div>
+      {delta && <div className={cn('delta', delta)}>{delta === 'up' ? '↑' : delta === 'down' ? '↓' : '→'}</div>}
+      {targetLabel && <div className={cn('target-line', target)}>Target {targetLabel}</div>}
     </div>
   );
 }

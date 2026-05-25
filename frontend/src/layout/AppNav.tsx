@@ -1,0 +1,53 @@
+import { Link, NavLink } from 'react-router-dom';
+import { Icon } from '../components/Icon';
+import { usePersona } from '../lib/persona';
+
+export function AppNav({ unreadAlerts = 0 }: { unreadAlerts?: number }) {
+  const { persona } = usePersona();
+  const isAgency = persona === 'agency';
+
+  return (
+    <header className="nav no-print">
+      <div className="wrap nav-inner">
+        <Link className="logo" to="/">
+          <span className="mk">CM</span>
+          <span>CareerMoveChecker</span>
+        </Link>
+        <nav className="app-tabs" aria-label="App">
+          <NavLink to="/app/search" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <Icon name="search" />
+            <span>Search</span>
+          </NavLink>
+          <NavLink to="/app/compare" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <Icon name="compare" />
+            <span>Compare</span>
+          </NavLink>
+          <NavLink to="/app/saved" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <Icon name="star" />
+            <span>Saved</span>
+          </NavLink>
+          <NavLink to="/app/alerts" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <Icon name="bell" />
+            <span>Alerts</span>
+            {unreadAlerts > 0 && <span className="dot-unread" aria-label={`${unreadAlerts} unread`} />}
+          </NavLink>
+          {isAgency && (
+            <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <Icon name="upload" />
+              <span>Bulk check</span>
+            </NavLink>
+          )}
+        </nav>
+        <div className="nav-cta">
+          <span className="quota">
+            {persona === 'candidate' ? <><b>3</b> of 5 free checks left</> : <><b>{persona === 'freelancer' ? 'Pro' : 'Agency'}</b> · unlimited</>}
+          </span>
+          <Link className="av-pill" to="/account" aria-label="Account">
+            <span className="av">DP</span>
+            <span>Account</span>
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
