@@ -44,7 +44,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/alerts/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll())
                 .httpBasic(b -> {})
-                .formLogin(f -> f.disable());
+                .formLogin(f -> f.disable())
+                // Kill saved-request cache. We don't redirect-to-login anywhere
+                // (no form login). Without this disable, the HttpSessionRequestCache
+                // can wrap the request infinitely on the /error path and produce
+                // StackOverflowError in getQueryString().
+                .requestCache(c -> c.disable())
+                .securityContext(s -> s.requireExplicitSave(true))
+                .sessionManagement(s -> s.sessionCreationPolicy(
+                        org.springframework.security.config.http.SessionCreationPolicy.STATELESS));
         return http.build();
     }
 }
