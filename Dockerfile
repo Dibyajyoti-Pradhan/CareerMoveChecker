@@ -15,7 +15,7 @@ COPY backend/pom.xml ./backend/pom.xml
 RUN cd backend && mvn -B -q -DskipTests dependency:go-offline
 COPY backend ./backend
 COPY --from=frontend /work/frontend/dist ./backend/src/main/resources/static
-RUN cd backend && mvn -B -DskipTests package
+RUN cd backend && mvn -B -Dmaven.test.skip=true package
 
 # ---------- Stage 3: runtime ----------
 FROM eclipse-temurin:21-jre-alpine
