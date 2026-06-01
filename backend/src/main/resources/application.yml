@@ -7,10 +7,11 @@ spring:
     serialization:
       write-dates-as-timestamps: false
   datasource:
-    # Render exposes individual host/port/db/user/pwd. We construct JDBC URL here
-    # so we don't have to rely on a pre-formatted DATABASE_URL (Render's connectionString
-    # is in postgres:// form, which Hikari rejects).
-    url: ${DATABASE_URL:jdbc:postgresql://${DATABASE_HOST:localhost}:${DATABASE_PORT:5432}/${DATABASE_NAME:careermovechecker}}
+    # Always compose the JDBC URL from individual components.
+    # Render's connectionString is in postgres:// form which Hikari rejects, so we
+    # deliberately do NOT honour a DATABASE_URL env var here. To override fully,
+    # set SPRING_DATASOURCE_URL (Spring's native binding takes precedence).
+    url: jdbc:postgresql://${DATABASE_HOST:localhost}:${DATABASE_PORT:5432}/${DATABASE_NAME:careermovechecker}
     username: ${DATABASE_USERNAME:careermove}
     password: ${DATABASE_PASSWORD:careermove}
   jpa:
