@@ -129,7 +129,7 @@ class RuleBasedRiskScoringEngineTest {
     }
 
     private CompanyData.Officer officer(String name, LocalDate resigned) {
-        return new CompanyData.Officer(name, "director", LocalDate.now().minusYears(2), resigned, "British", "director");
+        return new CompanyData.Officer(name, "director", LocalDate.now().minusYears(2), resigned, "British", "director", null);
     }
 
     private CompanyData.PscEntry psc() {
