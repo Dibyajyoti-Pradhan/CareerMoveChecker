@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, DragEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
@@ -11,10 +11,9 @@ export function BulkCheckPage() {
   const [loading, setLoading] = useState(false);
   const [filename, setFilename] = useState<string>('');
   const [filter, setFilter] = useState<'all' | 'safe' | 'watch' | 'avoid' | 'unmatched'>('all');
+  const [dragOver, setDragOver] = useState(false);
 
-  const upload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = async (file: File) => {
     setFilename(file.name);
     setLoading(true);
     const text = await file.text();
@@ -28,6 +27,27 @@ export function BulkCheckPage() {
       setLoading(false);
     }
   };
+
+  const upload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => setDragOver(false);
 
   const filtered = result?.rows.filter((r) => filter === 'all' || r.bucket === filter) ?? [];
 
@@ -77,7 +97,6 @@ export function BulkCheckPage() {
             </div>
           </div>
           <div className="row">
-            <button className="btn btn-secondary btn-sm"><Icon name="refresh" /> Refresh all</button>
             <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer' }}>
               <Icon name="upload" /> New upload
               <input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={upload} />
@@ -140,9 +159,22 @@ export function BulkCheckPage() {
       )}
 
       {!filename && (
-        <div className="empty" style={{ marginTop: 32, padding: 60 }}>
+        <div
+          className="empty"
+          style={{
+            marginTop: 32,
+            padding: 60,
+            border: dragOver ? '2px dashed var(--brand)' : '2px dashed var(--hair)',
+            borderRadius: 12,
+            background: dragOver ? 'var(--canvas)' : undefined,
+            transition: 'border-color 0.15s, background 0.15s',
+          }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <Icon name="upload" size={32} />
-          <h3 style={{ margin: '14px 0 6px' }}>Drop a CSV here or click "Upload CSV"</h3>
+          <h3 style={{ margin: '14px 0 6px' }}>{dragOver ? 'Release to upload' : 'Drop a CSV here or click "Upload CSV"'}</h3>
           <p>One company per row. Use the template if you're not sure of the format.</p>
         </div>
       )}

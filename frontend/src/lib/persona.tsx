@@ -10,12 +10,6 @@ export const PERSONA_LABEL: Record<Persona, string> = {
   agency: 'Recruitment agency',
 };
 
-export const PERSONA_IX: Record<Persona, string> = {
-  candidate: '01',
-  freelancer: '02',
-  agency: '03',
-};
-
 const KEY = 'cmc.persona';
 
 interface Ctx {
@@ -59,32 +53,4 @@ export function usePersona(): Ctx {
   const c = useContext(PersonaCtx);
   if (!c) throw new Error('usePersona must be used inside PersonaProvider');
   return c;
-}
-
-interface SwitchProps {
-  showLabel?: boolean;
-}
-
-export function PersonaSwitch({ showLabel = true }: SwitchProps) {
-  const { persona, setPersona } = usePersona();
-  return (
-    <div className="switch-line">
-      {showLabel && <span className="lbl">I'm checking as a</span>}
-      <div className="persona-switch" role="tablist" aria-label="Persona switcher">
-        {PERSONAS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            role="tab"
-            aria-selected={p === persona}
-            className={p === persona ? 'active' : ''}
-            onClick={() => setPersona(p)}
-          >
-            <span className="ix">{PERSONA_IX[p]}</span>
-            {PERSONA_LABEL[p]}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 }

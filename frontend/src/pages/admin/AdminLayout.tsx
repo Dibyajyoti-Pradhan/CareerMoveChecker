@@ -98,7 +98,7 @@ function AdminNav({ onSignOut }: { onSignOut: () => void }) {
       <div className="wrap nav-inner">
         <Link className="logo" to="/admin">
           <span className="mk">CM</span>
-          <span>CareerMoveChecker</span>
+          <span>CareerMove</span>
           <span className="tag">ops</span>
         </Link>
         <div className="live-pill mono">{new Date().toISOString().slice(11, 19)} UTC</div>

@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { PersonaSwitch, usePersona } from '../lib/persona';
 import { api } from '../api/client';
-import { SAVED_TITLE_EM, SAVED_SUB, SAVED_STAT_LABEL, SAVED_FILTER_LABEL } from '../lib/persona-copy';
-import type { CompanyReport, SavedCompany, RiskLevel } from '../types';
+import type { CompanyReport, FeedAlertDto, FeedResponse, SavedCompany, RiskLevel } from '../types';
 import { crestInitials, formatDate, relativeTime } from '../lib/format';
 import { cn } from '../lib/cn';
 
@@ -12,14 +10,31 @@ const FILTERS = ['all', 'safe', 'watch', 'red'] as const;
 
 type Bucket = 'safe' | 'watch' | 'red' | 'unknown';
 
+// Pick the first non-empty persona string from the backend's map.
+function universalMeans(a: FeedAlertDto): string {
+  return a.meansByPersona.candidate || a.meansByPersona.freelancer || a.meansByPersona.agency || '';
+}
+
+const MAX_RECENT_CHANGES = 20;
+
 export function SavedPage() {
-  const { persona } = usePersona();
   const [items, setItems] = useState<SavedCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<typeof FILTERS[number]>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
+
+  // Alerts feed state
+  const [feed, setFeed] = useState<FeedResponse | null>(null);
+  const [feedLoading, setFeedLoading] = useState(true);
+
+  const loadFeed = () => {
+    setFeedLoading(true);
+    api.alertsFeed()
+      .then((r) => { setFeed(r); setFeedLoading(false); })
+      .catch(() => { setFeed({ groups: [], unread: 0, totalCount: 0 }); setFeedLoading(false); });
+  };
 
   useEffect(() => {
     api.listSaved().then(async (r) => {
@@ -31,7 +46,18 @@ export function SavedPage() {
       );
       setReports(Object.fromEntries(pairs));
     }).catch(() => setLoading(false));
+
+    loadFeed();
   }, []);
+
+  const markAll = async () => { await api.alertsMarkAllRead(); loadFeed(); };
+  const markOne = async (id: number) => { await api.alertsMarkRead(id); loadFeed(); };
+
+  // Flatten all feed items across day-groups, cap at MAX_RECENT_CHANGES
+  const recentAlerts = useMemo(() => {
+    if (!feed) return [];
+    return feed.groups.flatMap((g) => g.items).slice(0, MAX_RECENT_CHANGES);
+  }, [feed]);
 
   const bucketFor = (n: string): Bucket => {
     const r = reports[n];
@@ -72,28 +98,77 @@ export function SavedPage() {
     <div className="wrap">
       <div className="page-head">
         <div>
-          <h1>Your saved <em>{SAVED_TITLE_EM[persona]}</em></h1>
-          <p className="sub">{SAVED_SUB[persona]}</p>
+          <h1>Saved companies</h1>
+          <p className="sub">Your shortlist. Re-check before each commit.</p>
         </div>
         <div className="head-actions">
-          <button className="btn btn-secondary btn-sm"><Icon name="refresh" /> Refresh all</button>
           <Link className="btn btn-primary btn-sm" to="/app/search"><Icon name="plus" /> Add a company</Link>
         </div>
       </div>
 
-      <div style={{ padding: '14px 0' }}><PersonaSwitch showLabel={false} /></div>
+      {/* Recent changes (alerts feed) */}
+      <section aria-label="Recent changes">
+        <div className="page-head" style={{ marginBottom: 0 }}>
+          <div>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Recent changes</h2>
+          </div>
+          {feed && feed.unread > 0 && (
+            <div className="head-actions">
+              <button className="btn btn-secondary btn-sm" onClick={markAll}>
+                <Icon name="check" /> Mark all read
+              </button>
+            </div>
+          )}
+        </div>
 
+        {feedLoading && <div className="empty" style={{ margin: '12px 0' }}>Loading…</div>}
+
+        {!feedLoading && recentAlerts.length === 0 && (
+          <div className="empty" style={{ padding: '28px 0', textAlign: 'center' }}>
+            <Icon name="bell" size={24} />
+            <p style={{ marginTop: 8, color: 'var(--muted)' }}>No changes yet. We're watching your saved companies.</p>
+          </div>
+        )}
+
+        {!feedLoading && recentAlerts.length > 0 && (
+          <div className="feed" style={{ marginBottom: 28 }}>
+            {recentAlerts.map((a) => {
+              const means = universalMeans(a);
+              return (
+                <div key={a.id} className={cn('al', a.severity, a.unread && 'unread')}>
+                  <div className="ic-l">
+                    <Icon name={a.severity === 'bad' ? 'alert' : a.severity === 'warn' ? 'warn' : a.severity === 'ok' ? 'check' : 'info'} />
+                  </div>
+                  <div>
+                    <div className="head-row">
+                      <h3><Link to={`/app/company/${a.companyNumber}`}>{a.companyName}</Link></h3>
+                      <span className={cn('severity', `badge-${a.severity === 'bad' ? 'bad' : a.severity === 'warn' ? 'warn' : a.severity === 'ok' ? 'ok' : 'info'}`)}>{a.severity}</span>
+                    </div>
+                    <p className="what">{a.title} — <span className="muted">{a.description}</span></p>
+                    {means && <div className="means"><b>What it means:</b> {means}</div>}
+                  </div>
+                  <div className="right">
+                    <span className="when">{relativeTime(a.when)}</span>
+                    <Link to={`/app/company/${a.companyNumber}`} className="icon-btn"><Icon name="external" size={14} /></Link>
+                    {a.unread && (
+                      <button className="icon-btn" onClick={() => markOne(a.id)} title="Mark read">
+                        <Icon name="check" size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Saved companies list */}
       <div className="stats">
         <div className="stat"><span className="label">Total saved</span><span className="val">{items.length}</span></div>
-        <div className="stat"><span className="label">{SAVED_STAT_LABEL[persona]}</span><span className="val ok">{counts.safe}</span></div>
+        <div className="stat"><span className="label">Clear</span><span className="val ok">{counts.safe}</span></div>
         <div className="stat"><span className="label">Watch closely</span><span className="val warn">{counts.watch}</span></div>
         <div className="stat"><span className="label">Red flags</span><span className="val bad">{counts.red}</span></div>
-      </div>
-
-      <div className="alerts-card">
-        <Icon name="bell" />
-        <p><b>2 changes</b> across your saved companies since you last visited.</p>
-        <Link to="/app/alerts">See alerts →</Link>
       </div>
 
       <div className="toolbar">
@@ -103,7 +178,7 @@ export function SavedPage() {
         </div>
         {FILTERS.map((f) => (
           <button key={f} className={cn('filter-chip', filter === f && 'active')} onClick={() => setFilter(f)}>
-            {f === 'all' ? 'All' : f === 'safe' ? SAVED_FILTER_LABEL[persona] : f === 'watch' ? 'Watch' : 'Red flag'}
+            {f === 'all' ? 'All' : f === 'safe' ? 'Clear' : f === 'watch' ? 'Watch' : 'Red flag'}
           </button>
         ))}
         <div className="sort">
@@ -129,8 +204,8 @@ export function SavedPage() {
           <span><Icon name="check" size={12} /></span>
           <span>Company</span>
           <span>Status</span>
-          <span>{persona === 'candidate' ? 'Will it last?' : persona === 'freelancer' ? 'Will they pay?' : 'Safe to place?'}</span>
-          <span>Change</span>
+          <span>Trust verdict</span>
+          <span>Current risk</span>
           <span></span>
         </div>
         {loading && [0, 1, 2].map((i) => <div key={i} className="srow"><div /><div className="skel" style={{ height: 32 }} /><div /><div /><div /><div /></div>)}

@@ -111,7 +111,7 @@ export function WaitlistModal({ open, onClose, tier, ctaId }: Props) {
                 {busy ? 'Sending…' : tier === 'Pro' ? 'Notify me when Pro launches' : 'Get on the call list'}
               </button>
               <p className="small muted" style={{ marginTop: 12, textAlign: 'center' }}>
-                We only email about CareerMoveChecker. Unsubscribe anytime.
+                We only email about CareerMove. Unsubscribe anytime.
               </p>
             </form>
           </>

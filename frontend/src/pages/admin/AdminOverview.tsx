@@ -10,9 +10,13 @@ export function AdminOverview() {
   const [range, setRange] = useState('7d');
   const [s, setS] = useState<any>(null);
   const [searchesDay, setSearchesDay] = useState<{ day: string; cnt: number }[]>([]);
+  const [waitlistTotal, setWaitlistTotal] = useState<number | null>(null);
 
   useEffect(() => { admin.summary(range).then(setS); }, [range]);
   useEffect(() => { admin.searchesByDay(14).then(setSearchesDay); }, []);
+  useEffect(() => {
+    admin.waitlist(0, 1).then((d) => setWaitlistTotal(d.totalElements ?? null));
+  }, []);
 
   return (
     <>
@@ -21,6 +25,39 @@ export function AdminOverview() {
         sub={s ? `${formatNumber(s.searchesInRange ?? 0)} searches · ${formatNumber(s.totalSavedCompanies ?? 0)} saved · ${formatNumber(s.totalCachedReports ?? 0)} cached reports` : 'Loading…'}
         actions={<RangePick value={range} onChange={setRange} />}
       />
+
+      {/* Hero KPI — waitlist signups is the single number that decides whether to keep building */}
+      <div className="adm-card" style={{
+        marginBottom: 24,
+        padding: '28px 32px',
+        borderLeft: '4px solid var(--brand)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
+      }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: 6 }}>
+            Primary metric — waitlist signups
+          </div>
+          <div style={{
+            fontSize: 'clamp(48px, 6vw, 80px)',
+            fontWeight: 800,
+            lineHeight: 1,
+            color: 'var(--brand)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {waitlistTotal === null ? '—' : formatNumber(waitlistTotal)}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8 }}>
+            Total signups · all time. This is what decides whether to keep building.
+          </div>
+        </div>
+        <Link to="/admin/waitlist" className="btn btn-secondary btn-sm" style={{ flexShrink: 0 }}>
+          View signups
+        </Link>
+      </div>
 
       {!s && <div className="empty">Loading…</div>}
       {s && (
@@ -37,7 +74,7 @@ export function AdminOverview() {
             </div>
           )}
 
-          <h4 className="label" style={{ margin: '20px 0 8px' }}>North-star metrics</h4>
+          <h4 className="label" style={{ margin: '20px 0 8px' }}>Secondary metrics</h4>
           <div className="kpis">
             <Kpi label="Searches today" v={s.searchesToday} />
             <Kpi label={`Searches (${range})`} v={s.searchesInRange} />

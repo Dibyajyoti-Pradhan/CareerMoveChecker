@@ -1,12 +1,11 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { PersonaSwitch, usePersona } from '../lib/persona';
 import { api } from '../api/client';
 import type { CompanyReport, CompanySearchHit } from '../types';
 import { crestInitials, formatDate, yearsSince } from '../lib/format';
 import { cn } from '../lib/cn';
-import { HERO_QUESTION } from '../lib/persona-copy';
+import { COMPARE_H1, COMPARE_SUB, HERO_QUESTION } from '../lib/persona-copy';
 
 const MAX = 3;
 
@@ -17,7 +16,6 @@ export function ComparePage() {
   const [reports, setReports] = useState<CompanyReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState('');
-  const { persona } = usePersona();
 
   useEffect(() => {
     if (numbers.length === 0) { setReports([]); return; }
@@ -68,19 +66,10 @@ export function ComparePage() {
     <div className="wrap">
       <div className="page-head">
         <div>
-          <h1>Compare up to <em>three</em></h1>
-          <p className="sub">
-            {persona === 'candidate' && 'Pick between offers — see which company is most likely to still be here next year.'}
-            {persona === 'freelancer' && 'Pick between clients — see which is most likely to pay.'}
-            {persona === 'agency' && 'Pick between clients — see which is safest to place candidates with.'}
-          </p>
-        </div>
-        <div className="head-actions">
-          <button className="btn btn-secondary btn-sm"><Icon name="download" /> Export PDF</button>
+          <h1>{COMPARE_H1}</h1>
+          <p className="sub">{COMPARE_SUB}</p>
         </div>
       </div>
-
-      <div style={{ padding: '14px 0' }}><PersonaSwitch showLabel={false} /></div>
 
       <div style={{ position: 'relative', maxWidth: 480, marginBottom: 14 }}>
         <form onSubmit={add} style={{ display: 'flex', gap: 8 }}>
@@ -119,7 +108,7 @@ export function ComparePage() {
       </div>
 
       <div className="question-strip">
-        <h3>{HERO_QUESTION[persona]}</h3>
+        <h3>{HERO_QUESTION}</h3>
         <span className="count">{numbers.length} of {MAX} slots used</span>
       </div>
 

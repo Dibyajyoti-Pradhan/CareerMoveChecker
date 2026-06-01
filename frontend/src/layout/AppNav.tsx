@@ -1,17 +1,13 @@
 import { Link, NavLink } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { usePersona } from '../lib/persona';
 
-export function AppNav({ unreadAlerts = 0 }: { unreadAlerts?: number }) {
-  const { persona } = usePersona();
-  const isAgency = persona === 'agency';
-
+export function AppNav() {
   return (
     <header className="nav no-print">
       <div className="wrap nav-inner">
         <Link className="logo" to="/">
           <span className="mk">CM</span>
-          <span>CareerMoveChecker</span>
+          <span>CareerMove</span>
         </Link>
         <nav className="app-tabs" aria-label="App">
           <NavLink to="/app/search" className={({ isActive }) => (isActive ? 'active' : '')}>
@@ -26,17 +22,10 @@ export function AppNav({ unreadAlerts = 0 }: { unreadAlerts?: number }) {
             <Icon name="star" />
             <span>Saved</span>
           </NavLink>
-          <NavLink to="/app/alerts" className={({ isActive }) => (isActive ? 'active' : '')}>
-            <Icon name="bell" />
-            <span>Alerts</span>
-            {unreadAlerts > 0 && <span className="dot-unread" aria-label={`${unreadAlerts} unread`} />}
+          <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <Icon name="upload" />
+            <span>Bulk check</span>
           </NavLink>
-          {isAgency && (
-            <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')}>
-              <Icon name="upload" />
-              <span>Bulk check</span>
-            </NavLink>
-          )}
         </nav>
         <div className="nav-cta">
           <Link className="btn btn-ghost btn-sm" to="/" style={{ color: 'var(--muted)' }}>← Back to site</Link>

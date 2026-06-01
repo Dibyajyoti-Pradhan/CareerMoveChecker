@@ -38,3 +38,16 @@ export function formatPct(n: number): string {
 export function crestInitials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
 }
+
+// Extract the Companies House company number from a CH URL, path fragment, or raw input.
+// Accepts: full URL (find-and-update.company-information.service.gov.uk/company/09446231),
+//   path fragment (/company/09446231), or bare number/prefix (09446231, SC123456).
+// Returns the uppercased number if matched, else null.
+export function extractCompanyNumber(input: string): string | null {
+  const trimmed = input.trim();
+  const urlMatch = trimmed.match(/\/company\/([A-Z0-9]{6,10})/i);
+  if (urlMatch) return urlMatch[1].toUpperCase();
+  const bare = trimmed.match(/^[A-Z0-9]{6,10}$/i);
+  if (bare) return trimmed.toUpperCase();
+  return null;
+}
