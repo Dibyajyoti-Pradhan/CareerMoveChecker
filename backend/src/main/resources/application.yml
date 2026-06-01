@@ -38,11 +38,15 @@ management:
 
 cmc:
   admin:
+    # SECURITY: weak default for local dev. ALWAYS override ADMIN_PASSWORD env var in prod.
     password: ${ADMIN_PASSWORD:change_me_local}
   base-url: ${APP_BASE_URL:http://localhost:8080}
   companies-house:
     base-url: https://api.company-information.service.gov.uk
-    api-key: ${COMPANIES_HOUSE_API_KEY:}
+    # SECURITY: hardcoded keys are baked-in fallbacks for convenience.
+    # Override via env vars in prod. Rotate immediately if repo is ever made public or shared.
+    api-key: ${COMPANIES_HOUSE_API_KEY:998113d6-a542-4b72-a64e-cac48fa23271}
+    stream-key: ${COMPANIES_HOUSE_STREAM_KEY:afc967c0-3a9d-4f02-b5a3-af3200ede8a9}
     timeout-ms: 8000
   risk:
     engine: ${RISK_SCORING_ENGINE:RULE_BASED}

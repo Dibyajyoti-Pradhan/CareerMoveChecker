@@ -6,12 +6,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class CompaniesHouseProperties {
     private String baseUrl = "https://api.company-information.service.gov.uk";
     private String apiKey = "";
+    private String streamKey = "";
     private int timeoutMs = 8000;
 
     public String getBaseUrl() { return baseUrl; }
     public void setBaseUrl(String v) { baseUrl = v; }
     public String getApiKey() { return apiKey; }
     public void setApiKey(String v) { apiKey = v; }
+    public String getStreamKey() { return streamKey; }
+    public void setStreamKey(String v) { streamKey = v; }
     public int getTimeoutMs() { return timeoutMs; }
     public void setTimeoutMs(int v) { timeoutMs = v; }
 }
