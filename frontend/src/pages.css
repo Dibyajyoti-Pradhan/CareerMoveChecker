@@ -672,6 +672,9 @@ section.s.tight { padding: 64px 0 96px; }
   .srow > :nth-child(3),
   .saved-table .head > :nth-child(n+5),
   .srow > :nth-child(n+5) { display: none; }
+  .id-card { grid-template-columns: 1fr; }
+  .id-actions { align-items: flex-start; }
+  .id-actions .row { flex-wrap: wrap; }
   .rail-card { padding: 14px; }
   .results-table .head, .brow { grid-template-columns: 38px 1fr 80px; }
   .results-table .head > :not(:nth-child(-n+3)),

@@ -201,6 +201,18 @@ export function ComparePage() {
             sub: r.assessment.verdict.slice(0, 80) + '…',
           }))} bestIdx={findBest(reports)} worstIdx={findWorst(reports)} />
 
+          <Row label="Company type" cells={reports.map((r) => ({
+            tone: 'ok' as const,
+            val: r.profile.companyType,
+            sub: '',
+          }))} />
+
+          <Row label="Industry (SIC)" cells={reports.map((r) => ({
+            tone: 'ok' as const,
+            val: r.profile.sicCodes?.join(', ') || '—',
+            sub: '',
+          }))} />
+
           <Row label="Trading history" cells={reports.map((r) => {
             const y = yearsSince(r.profile.incorporatedOn);
             return { tone: (y ?? 0) >= 5 ? 'ok' : 'warn', val: y ? `${y} years` : '—', sub: `Incorporated ${formatDate(r.profile.incorporatedOn)}` };

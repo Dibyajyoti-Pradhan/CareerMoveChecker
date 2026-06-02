@@ -31,6 +31,7 @@ export function CompanyReportPage() {
   const [tab, setTab] = useState<TabId>('flags');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
   const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'done'>('idle');
+  const [showAllFilings, setShowAllFilings] = useState(false);
 
   const companyName = report?.profile.companyName ?? 'Company report';
   const companyNumber = report?.profile.companyNumber ?? id;
@@ -266,9 +267,28 @@ export function CompanyReportPage() {
             {report.disqualificationCheck && (
               <div className={cn('disq-banner', report.disqualificationCheck.status === 'MATCH' && 'bad')}>
                 <Icon name={report.disqualificationCheck.status === 'MATCH' ? 'alert' : 'shield'} />
-                {report.disqualificationCheck.status === 'MATCH'
-                  ? `⚠ ${report.disqualificationCheck.matches.length} disqualified officer(s) detected on the current board: ${report.disqualificationCheck.matches.map((m) => m.name).join(', ')}.`
-                  : 'No disqualified officers detected on the current board.'}
+                {report.disqualificationCheck.status === 'MATCH' ? (
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                      ⚠ {report.disqualificationCheck.matches.length} disqualified officer(s) detected on the current board
+                    </div>
+                    {report.disqualificationCheck.matches.map((m, i) => (
+                      <div key={i} style={{ fontSize: 13, marginTop: 4 }}>
+                        <span style={{ fontWeight: 600 }}>{m.name}</span>
+                        {(m.reason || m.disqualifiedFrom || m.disqualifiedUntil) && (
+                          <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--ink-2)' }}>
+                            {m.reason && <span> · {m.reason}</span>}
+                            {m.disqualifiedFrom && (
+                              <span> · Banned {formatDate(m.disqualifiedFrom)}{m.disqualifiedUntil ? ` – ${formatDate(m.disqualifiedUntil)}` : ' – ongoing'}</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  'No disqualified officers detected on the current board.'
+                )}
               </div>
             )}
 
@@ -279,6 +299,11 @@ export function CompanyReportPage() {
             <div className="answer-q">{REPORT_QUESTION}</div>
             <h3 className="answer-h"><em>{verdict.headline}</em></h3>
             <p className="answer-verdict">{a.verdict}</p>
+            {a.explanationSummary && (
+              <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginTop: 8, marginBottom: 0 }}>
+                {a.explanationSummary}
+              </p>
+            )}
 
             <div className="ticks">
               {a.topReasons.slice(0, 4).map((r, i) => {
@@ -430,7 +455,7 @@ export function CompanyReportPage() {
                   <div className="av">{crestInitials(o.name)}</div>
                   <div>
                     <div className="name">{o.name}</div>
-                    <div className="role">{o.role}{o.occupation && ` · ${o.occupation}`}</div>
+                    <div className="role">{o.role}{o.occupation && ` · ${o.occupation}`}{o.nationality && ` · ${o.nationality}`}</div>
                   </div>
                   <div className="when">{o.resignedOn ? `Resigned ${formatDate(o.resignedOn)}` : `Active since ${formatDate(o.appointedOn)}`}</div>
                   {o.previousCompanies && o.previousCompanies.length > 0 && (() => {
@@ -524,16 +549,29 @@ export function CompanyReportPage() {
               ))}
             </div>
             <div className="data-card">
-              <h3>Persons with significant control ({report.psc.length})</h3>
+              <h3>
+                Persons with significant control{' '}
+                ({report.psc.filter(psc => !psc.ceasedOn).length} active
+                {report.psc.some(psc => psc.ceasedOn) && `, ${report.psc.filter(psc => psc.ceasedOn).length} ceased`})
+              </h3>
               {report.psc.length === 0 && <div className="empty">No PSC declared. Requires manual review.</div>}
-              {report.psc.map((p, i) => (
-                <div key={i} className="person">
+              {[...report.psc].sort((a, b) => (a.ceasedOn ? 1 : 0) - (b.ceasedOn ? 1 : 0)).map((psc, i) => (
+                <div key={i} className="person" style={psc.ceasedOn ? { opacity: 0.6 } : undefined}>
                   <div className="av"><Icon name="user" /></div>
                   <div>
-                    <div className="name">{p.name}</div>
-                    <div className="role">{p.kind} · {p.natureOfControl.join(', ').replaceAll('-', ' ')}</div>
+                    <div className="name">{psc.name}</div>
+                    <div className="role">{psc.kind} · {psc.natureOfControl.join(', ').replaceAll('-', ' ')}</div>
+                    {psc.ceasedOn && (
+                      <span className="zone-tag deduced" style={{ marginTop: 4, display: 'inline-block' }}>
+                        Former PSC
+                      </span>
+                    )}
                   </div>
-                  <div className="when">{formatDate(p.notifiedOn)}</div>
+                  <div className="when">
+                    {psc.ceasedOn
+                      ? <span style={{ color: 'var(--muted)' }}>Ceased {formatDate(psc.ceasedOn)}</span>
+                      : `Notified ${formatDate(psc.notifiedOn)}`}
+                  </div>
                 </div>
               ))}
             </div>
@@ -574,9 +612,16 @@ export function CompanyReportPage() {
 
         <div id="panel-filings" role="tabpanel" aria-labelledby="tab-filings" tabIndex={0} hidden={tab !== 'filings'}>
           <div className="data-card">
-            <h3>Recent filings</h3>
+            <h3>
+              Recent filings
+              {report.filings.length > 20 && !showAllFilings && (
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>
+                  (showing 20 of {report.filings.length})
+                </span>
+              )}
+            </h3>
             <div className="timeline">
-              {report.filings.slice(0, 20).map((f) => (
+              {(showAllFilings ? report.filings : report.filings.slice(0, 20)).map((f) => (
                 <div key={f.id} className={cn('tl-item', f.category === 'insolvency' ? 'bad' : f.category === 'accounts' ? 'ok' : '')}>
                   <div className="when">{formatDate(f.date)} · {f.type}</div>
                   <h5>{f.category.replace('-', ' ')}</h5>
@@ -584,6 +629,15 @@ export function CompanyReportPage() {
                 </div>
               ))}
             </div>
+            {report.filings.length > 20 && !showAllFilings && (
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 12 }}
+                onClick={() => setShowAllFilings(true)}
+              >
+                Show all {report.filings.length} filings
+              </button>
+            )}
           </div>
         </div>
 
