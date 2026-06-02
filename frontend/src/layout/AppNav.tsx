@@ -30,15 +30,15 @@ export function AppNav() {
           <span>CareerMove</span>
         </Link>
         <nav className="app-tabs" aria-label="App">
-          <NavLink to="/app/search" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/app/search" className={({ isActive }) => (isActive ? 'active' : '')} title="Search UK companies">
             <Icon name="search" />
             <span>Search</span>
           </NavLink>
-          <NavLink to="/app/compare" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/app/compare" className={({ isActive }) => (isActive ? 'active' : '')} title="Compare up to 3 companies side by side">
             <Icon name="compare" />
             <span>Compare</span>
           </NavLink>
-          <NavLink to="/app/saved" className={({ isActive }) => (isActive ? 'active' : '')} aria-label={unread > 0 ? `Saved — ${unread} unread alert${unread !== 1 ? 's' : ''}` : undefined}>
+          <NavLink to="/app/saved" className={({ isActive }) => (isActive ? 'active' : '')} aria-label={unread > 0 ? `Saved — ${unread} unread alert${unread !== 1 ? 's' : ''}` : undefined} title="Your saved companies and change alerts">
             <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
               <Icon name="star" />
               {unread > 0 && (
@@ -55,16 +55,16 @@ export function AppNav() {
             </span>
             <span>Saved</span>
           </NavLink>
-          <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')} title="Bulk check up to 50 companies">
             <Icon name="upload" />
             <span>Bulk check</span>
           </NavLink>
         </nav>
         <div className="nav-cta" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Link className="btn btn-primary btn-sm" to="/pricing" style={{ fontSize: 12 }}>
+          <Link className="btn btn-primary btn-sm" to="/pricing" style={{ fontSize: 12 }} title="View Pro and Agency pricing plans">
             Upgrade ↗
           </Link>
-          <Link className="btn btn-ghost btn-sm" to="/" style={{ color: 'var(--muted)' }}>← Back to site</Link>
+          <Link className="btn btn-ghost btn-sm" to="/" style={{ color: 'var(--muted)' }} title="Return to the CareerMove marketing site">← Back to site</Link>
         </div>
       </div>
     </header>

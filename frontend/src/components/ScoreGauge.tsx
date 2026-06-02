@@ -9,6 +9,11 @@ export function ScoreGauge({ score, confidence }: ScoreGaugeProps) {
   const barColor =
     score <= 39 ? 'var(--bad)' : score <= 69 ? 'var(--warn)' : 'var(--ok)';
 
+  const riskLabel =
+    score <= 39 ? 'high risk' :
+    score <= 69 ? 'moderate risk' :
+    'low risk';
+
   return (
     <div>
       <div
@@ -40,6 +45,7 @@ export function ScoreGauge({ score, confidence }: ScoreGaugeProps) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label="Risk score"
+        aria-valuetext={`${score} out of 100 — ${riskLabel}, confidence ${Math.round(confidence * 100)}%`}
         style={{
           height: 10,
           borderRadius: 5,

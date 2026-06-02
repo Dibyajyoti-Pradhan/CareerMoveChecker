@@ -174,6 +174,21 @@ export function CompanyReportPage() {
 
   return (
     <div className="wrap">
+      <div className="print-header" aria-hidden="true" style={{ display: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 14, borderBottom: '2px solid #0b1220', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#5b6473', marginBottom: 4 }}>
+              CareerMove · Trust Report
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#5b6473' }}>
+              Printed {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#5b6473', textAlign: 'right' }}>
+            careermove.uk/c/{p.companyNumber}
+          </div>
+        </div>
+      </div>
       {toast && (
         <div
           style={{
@@ -402,12 +417,12 @@ export function CompanyReportPage() {
           const showDirectorSummary = officersWithDissolvedHistory.length > 0 && report.officers.some(o => o.previousCompanies);
           return (
           <div className="grid-2" style={{ marginTop: 18 }}>
+            {showDirectorSummary && (
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12, gridColumn: '1 / -1' }}>
+                {officersWithDissolvedHistory.length} of {report.officers.length} director{report.officers.length !== 1 ? 's' : ''} have been associated with dissolved companies.
+              </p>
+            )}
             <div className="data-card">
-              {showDirectorSummary && (
-                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-                  {officersWithDissolvedHistory.length} of {report.officers.length} director{report.officers.length !== 1 ? 's' : ''} have been associated with dissolved companies.
-                </p>
-              )}
               <h3>Officers ({report.officers.length})</h3>
               {report.officers.length === 0 && <div className="empty">No officers returned.</div>}
               {report.officers.map((o, i) => (
@@ -475,7 +490,7 @@ export function CompanyReportPage() {
                                             className={
                                               pc.status === 'active'
                                                 ? 'zone-tag direct'
-                                                : pc.status === 'liquidation'
+                                                : pc.status === 'liquidation' || pc.status === 'dissolved'
                                                 ? 'zone-tag deduced'
                                                 : 'zone-tag not'
                                             }
@@ -576,6 +591,7 @@ export function CompanyReportPage() {
 
       {/* Feedback */}
       <div
+        className="feedback-row no-print"
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0', borderTop: '1px solid var(--hair)', marginTop: 32 }}
         aria-label="Report feedback"
       >
@@ -619,6 +635,13 @@ export function CompanyReportPage() {
           </>
         )}
       </div>
+      <p
+        className="print-disclaimer"
+        aria-hidden="true"
+        style={{ display: 'none', fontSize: 11, color: '#5b6473', borderTop: '1px solid #e6e8ee', paddingTop: 14, marginTop: 24, lineHeight: 1.5 }}
+      >
+        This report is based on public Companies House data. It is not a credit report, legal advice, or guarantee of solvency. CareerMove turns public records into plain English — you decide. Data fetched: {relativeTime(report.dataFetchedAt)}.
+      </p>
     </div>
   );
 }
