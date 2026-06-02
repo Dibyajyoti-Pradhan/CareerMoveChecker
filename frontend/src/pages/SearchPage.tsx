@@ -30,6 +30,7 @@ export function SearchPage() {
   const [q, setQ] = useState(initialQ);
   const [hits, setHits] = useState<CompanySearchHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [searched, setSearched] = useState(Boolean(initialQ));
   const [recent, setRecent] = useState(() => getRecentSearches());
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export function SearchPage() {
       return;
     }
     setLoading(true);
+    setError(false);
     setSearched(true);
     let stop = false;
     api.searchCompanies(initialQ).then((r) => {
@@ -51,6 +53,7 @@ export function SearchPage() {
     }).catch(() => {
       if (!stop) {
         setHits([]);
+        setError(true);
         setLoading(false);
       }
     });
@@ -77,7 +80,7 @@ export function SearchPage() {
     }
   };
 
-  const noResults = searched && !loading && hits.length === 0 && initialQ;
+  const noResults = searched && !loading && !error && hits.length === 0 && initialQ;
 
   return (
     <>
@@ -136,6 +139,22 @@ export function SearchPage() {
             {loading && (
               <div className="result-list">
                 {[0, 1, 2].map((i) => <div key={i} className="skel" style={{ height: 92 }} />)}
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="state-card danger">
+                <div className="glyph" style={{ background: 'var(--bad-bg)', color: 'var(--bad)' }}>
+                  <Icon name="alert" size={20} />
+                </div>
+                <h3>Search failed</h3>
+                <p>We couldn't reach Companies House right now. Check your connection and try again.</p>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => { setError(false); setParams(initialQ ? { q: initialQ } : {}); }}
+                >
+                  <Icon name="refresh" /> Try again
+                </button>
               </div>
             )}
 

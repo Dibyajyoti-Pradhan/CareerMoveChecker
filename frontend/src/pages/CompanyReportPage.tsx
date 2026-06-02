@@ -26,6 +26,7 @@ export function CompanyReportPage() {
   const { id = '' } = useParams();
   const [report, setReport] = useState<CompanyReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<TabId>('flags');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
@@ -74,14 +75,47 @@ export function CompanyReportPage() {
   useEffect(() => {
     let stop = false;
     setLoading(true);
+    setError(false);
     api.getReport(id).then((r) => {
       if (!stop) {
         setReport(r);
         setLoading(false);
       }
+    }).catch((err: Error) => {
+      if (!stop) {
+        if (err.message.includes('404')) {
+          setReport(null);
+        } else {
+          setError(true);
+        }
+        setLoading(false);
+      }
     });
     return () => { stop = true; };
   }, [id]);
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const currentIdx = TAB_IDS.indexOf(tab);
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const nextIdx = (currentIdx + 1) % TAB_IDS.length;
+      setTab(TAB_IDS[nextIdx]);
+      document.getElementById(`tab-${TAB_IDS[nextIdx]}`)?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prevIdx = (currentIdx - 1 + TAB_IDS.length) % TAB_IDS.length;
+      setTab(TAB_IDS[prevIdx]);
+      document.getElementById(`tab-${TAB_IDS[prevIdx]}`)?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setTab(TAB_IDS[0]);
+      document.getElementById(`tab-${TAB_IDS[0]}`)?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setTab(TAB_IDS[TAB_IDS.length - 1]);
+      document.getElementById(`tab-${TAB_IDS[TAB_IDS.length - 1]}`)?.focus();
+    }
+  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -97,6 +131,23 @@ export function CompanyReportPage() {
   };
 
   if (loading) return <div className="wrap" style={{ padding: 60 }}><div className="skel" style={{ height: 200 }} /></div>;
+  if (error) return (
+    <div className="wrap" style={{ padding: 60 }}>
+      <div className="state-card danger">
+        <div className="glyph" style={{ background: 'var(--bad-bg)', color: 'var(--bad)' }}>
+          <Icon name="alert" size={20} />
+        </div>
+        <h3>Report unavailable</h3>
+        <p>We couldn't load the report for {id}. This may be a temporary issue with Companies House data.</p>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={() => { setLoading(true); setError(false); api.getReport(id).then(r => { setReport(r); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+        >
+          <Icon name="refresh" /> Try again
+        </button>
+      </div>
+    </div>
+  );
   if (!report) return (
     <div className="wrap" style={{ padding: 60 }}>
       <div className="state-card">
@@ -264,17 +315,25 @@ export function CompanyReportPage() {
 
       {/* ============ ZONE C ============ */}
       <section className="zone-c">
-        <div className="tabs" style={{ marginTop: 32 }}>
+        <div className="tabs" style={{ marginTop: 32 }} role="tablist" aria-label="Company report sections" onKeyDown={handleTabKeyDown}>
           {TAB_IDS.map((t) => (
-            <button key={t} className={cn('tab', tab === t && 'active')} onClick={() => setTab(t)}>
+            <button
+              key={t}
+              id={`tab-${t}`}
+              className={cn('tab', tab === t && 'active')}
+              onClick={() => setTab(t)}
+              role="tab"
+              aria-selected={tab === t}
+              aria-controls={`panel-${t}`}
+              tabIndex={tab === t ? 0 : -1}
+            >
               {TAB_LABELS[t]}
             </button>
           ))}
         </div>
 
-        {tab === 'flags' && (
-          <>
-            <div className="flag-grid" style={{ marginTop: 18 }}>
+        <div id="panel-flags" role="tabpanel" aria-labelledby="tab-flags" tabIndex={0} hidden={tab !== 'flags'}>
+          <div className="flag-grid" style={{ marginTop: 18 }}>
               {a.flags.map((f) => (
                 <div key={f.id} className="flag">
                   <span className={cn('m', f.severity === 'CRITICAL' && 'bad', f.severity === 'WARNING' && 'warn', (f.severity === 'POSITIVE' || f.severity === 'INFO') && 'ok')}>
@@ -313,10 +372,9 @@ export function CompanyReportPage() {
                 </div>
               </section>
             )}
-          </>
-        )}
+        </div>
 
-        {tab === 'identity' && (
+        <div id="panel-identity" role="tabpanel" aria-labelledby="tab-identity" tabIndex={0} hidden={tab !== 'identity'}>
           <div className="data-card">
             <h3>Registered office</h3>
             <p style={{ color: 'var(--ink-2)' }}>
@@ -334,9 +392,10 @@ export function CompanyReportPage() {
             <div className="acc-row"><span>Last accounts made up to</span><span className="mono">{formatDate(p.lastAccountsMadeUpTo)}</span></div>
             <div className="acc-row"><span>Next accounts due</span><span className="mono">{formatDate(p.nextAccountsDue)}</span></div>
           </div>
-        )}
+        </div>
 
-        {tab === 'people' && (() => {
+        <div id="panel-people" role="tabpanel" aria-labelledby="tab-people" tabIndex={0} hidden={tab !== 'people'}>
+        {(() => {
           const officersWithDissolvedHistory = report.officers.filter(o =>
             o.previousCompanies?.some(pc => pc.status === 'dissolved' || pc.status === 'liquidation')
           );
@@ -466,8 +525,9 @@ export function CompanyReportPage() {
           </div>
           );
         })()}
+        </div>
 
-        {tab === 'finance' && (
+        <div id="panel-finance" role="tabpanel" aria-labelledby="tab-finance" tabIndex={0} hidden={tab !== 'finance'}>
           <div className="data-card">
             <h3>Charges ({report.charges.length})</h3>
             {report.charges.length === 0 && <div className="empty">No charges on file.</div>}
@@ -495,9 +555,9 @@ export function CompanyReportPage() {
               ))
             )}
           </div>
-        )}
+        </div>
 
-        {tab === 'filings' && (
+        <div id="panel-filings" role="tabpanel" aria-labelledby="tab-filings" tabIndex={0} hidden={tab !== 'filings'}>
           <div className="data-card">
             <h3>Recent filings</h3>
             <div className="timeline">
@@ -510,7 +570,7 @@ export function CompanyReportPage() {
               ))}
             </div>
           </div>
-        )}
+        </div>
 
       </section>
 

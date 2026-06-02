@@ -33,7 +33,7 @@ export const api = {
     http<CompanySearchHit[]>(`/api/companies/search?q=${encodeURIComponent(q)}`),
 
   getReport: (companyNumber: string) =>
-    http<CompanyReport>(`/api/companies/${encodeURIComponent(companyNumber)}/report`).catch(() => null),
+    http<CompanyReport>(`/api/companies/${encodeURIComponent(companyNumber)}/report`),
 
   refreshReport: (companyNumber: string) =>
     http<CompanyReport>(`/api/companies/${encodeURIComponent(companyNumber)}/refresh`, { method: 'POST' }),
