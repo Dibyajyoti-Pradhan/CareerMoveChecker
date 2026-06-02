@@ -7,6 +7,7 @@ import { crestInitials, formatDate, relativeTime, yearsSince } from '../lib/form
 import { cn } from '../lib/cn';
 import { REPORT_QUESTION, REPORT_SAVE_LINE, REPORT_SAVE_CTA } from '../lib/persona-copy';
 import { useSeo } from '../lib/seo';
+import { ScoreGauge } from '../components/ScoreGauge';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -111,6 +112,14 @@ export function CompanyReportPage() {
   const years = yearsSince(p.incorporatedOn);
   const verdict = pickVerdict(a.riskLevel);
 
+  const canonicalUrl = `https://careermove.uk/c/${p.companyNumber}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard?.writeText(canonicalUrl)
+      .then(() => setToast({ text: 'Link copied to clipboard', tone: 'ok' }))
+      .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+  };
+
   return (
     <div className="wrap">
       {toast && (
@@ -155,6 +164,22 @@ export function CompanyReportPage() {
               <Link className="btn btn-secondary btn-sm" to={`/app/compare?numbers=${p.companyNumber}`}>
                 <Icon name="compare" /> Compare
               </Link>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleCopyLink}
+                aria-label="Copy report link to clipboard"
+              >
+                <Icon name="copy" /> Copy link
+              </button>
+              <a
+                className="btn btn-secondary btn-sm"
+                href={`https://find-and-update.company-information.service.gov.uk/company/${p.companyNumber}`}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={`Open ${report.profile.companyName} on Companies House (opens in new tab)`}
+              >
+                <Icon name="external" /> Companies House
+              </a>
             </div>
           </div>
         </div>

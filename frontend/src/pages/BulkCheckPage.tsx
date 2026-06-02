@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import type { BulkResult } from '../types';
 import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
+import { ScoreGauge } from '../components/ScoreGauge';
 
 export function BulkCheckPage() {
   const [result, setResult] = useState<BulkResult | null>(null);
@@ -144,10 +145,7 @@ export function BulkCheckPage() {
                     {r.bucket === 'safe' ? 'SAFE' : r.bucket === 'watch' ? 'WATCH' : r.bucket === 'avoid' ? 'AVOID' : 'UNMATCHED'}
                   </span>
                 </div>
-                <div className="conf">
-                  <div className="bar"><i style={{ width: `${Math.round((r.confidence ?? 0) * 100)}%` }} /></div>
-                  <span className="lbl">{(r.confidence ?? 0) >= 0.8 ? 'HIGH' : (r.confidence ?? 0) >= 0.5 ? 'MOD' : 'LOW'}</span>
-                </div>
+                <ScoreGauge score={r.score ?? 0} confidence={r.confidence ?? 0} />
                 <span>
                   {r.companyNumber && <Link to={`/app/company/${r.companyNumber}`} className="icon-btn"><Icon name="external" size={14} /></Link>}
                 </span>
