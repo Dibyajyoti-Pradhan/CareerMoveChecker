@@ -20,10 +20,10 @@ function addRecentSearch(name: string, number: string) {
 }
 function removeRecentSearch(number: string) {
   const current = getRecentSearches();
-  localStorage.setItem('recent', JSON.stringify(current.filter((r: { number: string }) => r.number !== number)));
+  localStorage.setItem(RECENT_KEY, JSON.stringify(current.filter((r: { number: string }) => r.number !== number)));
 }
 function clearRecentSearches() {
-  localStorage.setItem('recent', '[]');
+  localStorage.setItem(RECENT_KEY, '[]');
 }
 
 export function SearchPage() {
