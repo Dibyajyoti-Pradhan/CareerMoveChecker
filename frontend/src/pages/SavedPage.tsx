@@ -43,6 +43,7 @@ export function SavedPage() {
   const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
   const [sort, setSort] = useState<'recent' | 'name' | 'score'>('recent');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
+  const [bulkRefreshing, setBulkRefreshing] = useState(false);
 
   // Alerts feed state
   const [feed, setFeed] = useState<FeedResponse | null>(null);
@@ -125,6 +126,18 @@ export function SavedPage() {
       next.has(n) ? next.delete(n) : next.add(n);
       return next;
     });
+  };
+
+  const handleBulkRefresh = async () => {
+    setBulkRefreshing(true);
+    try {
+      await Promise.all(Array.from(selected).map(id => api.refreshReport(id)));
+      setToast({ text: 'Companies refreshed', tone: 'ok' });
+    } catch {
+      setToast({ text: 'Refresh failed — try again', tone: 'bad' });
+    } finally {
+      setBulkRefreshing(false);
+    }
   };
 
   return (
@@ -243,7 +256,15 @@ export function SavedPage() {
           <span className="count">{selected.size} selected</span>
           <div className="btns">
             <Link to={`/app/compare?numbers=${[...selected].join(',')}`} className="btn btn-ghost btn-sm"><Icon name="compare" /> Compare</Link>
-            <button className="btn btn-ghost btn-sm"><Icon name="refresh" /> Refresh</button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleBulkRefresh}
+              disabled={bulkRefreshing}
+              aria-label="Refresh selected companies"
+            >
+              {bulkRefreshing ? <span className="spinner" /> : <Icon name="refresh" />}
+              {bulkRefreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
             <button
               className="btn btn-ghost btn-sm"
               disabled={items.length === 0}

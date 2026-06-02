@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
 import type { CompanySearchHit } from '../types';
-import { crestInitials, extractCompanyNumber, formatDate, relativeTime } from '../lib/format';
+import { crestInitials, extractCompanyNumber, formatDate } from '../lib/format';
 import { SEARCH_H1, SEARCH_SUB, SEARCH_RAIL_Q, SEARCH_RAIL_BULLETS } from '../lib/persona-copy';
 import { useSeo } from '../lib/seo';
 
@@ -17,6 +17,13 @@ function getRecentSearches(): { name: string; number: string }[] {
 function addRecentSearch(name: string, number: string) {
   const cur = getRecentSearches().filter((r) => r.number !== number);
   localStorage.setItem(RECENT_KEY, JSON.stringify([{ name, number }, ...cur].slice(0, MAX_RECENT)));
+}
+function removeRecentSearch(number: string) {
+  const current = getRecentSearches();
+  localStorage.setItem(RECENT_KEY, JSON.stringify(current.filter((r: { number: string }) => r.number !== number)));
+}
+function clearRecentSearches() {
+  localStorage.setItem(RECENT_KEY, '[]');
 }
 
 export function SearchPage() {
@@ -112,15 +119,29 @@ export function SearchPage() {
               <div className="idle-grid">
                 {recent.length > 0 && (
                   <div className="recent-mini" style={{ marginBottom: 16 }}>
-                    <h5>Recent searches</h5>
-                    {recent.map((r) => (
-                      <button key={r.number} className="rrow" onClick={() => navigate(`/app/company/${r.number}`)} style={{ background: 'transparent', border: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }} aria-label={`View report for ${r.name}`}>
-                        <div>
-                          <div style={{ fontWeight: 500, fontSize: 13 }}>{r.name}</div>
-                          <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>#{r.number}</div>
-                        </div>
-                        <Icon name="arrow-right" size={12} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h5>Recent searches</h5>
+                      <button className="btn btn-ghost btn-sm" aria-label="Clear all recent searches" onClick={() => { clearRecentSearches(); setRecent([]); }}>
+                        Clear all
                       </button>
+                    </div>
+                    {recent.map((r) => (
+                      <div key={r.number} className="rrow">
+                        <button onClick={() => navigate(`/app/company/${r.number}`)} style={{ background: 'transparent', border: 0, textAlign: 'left', cursor: 'pointer', flex: 1, padding: 0 }} aria-label={`View report for ${r.name}`}>
+                          <div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>{r.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>#{r.number}</div>
+                          </div>
+                        </button>
+                        <Icon name="arrow-right" size={12} />
+                        <button
+                          className="btn btn-icon btn-ghost"
+                          aria-label={`Remove ${r.name} from recent searches`}
+                          onClick={(e) => { e.stopPropagation(); removeRecentSearch(r.number); setRecent(getRecentSearches()); }}
+                        >
+                          <Icon name="x" size={12} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -245,9 +266,14 @@ function ResultRow({ hit, q, onOpen }: { hit: CompanySearchHit; q: string; onOpe
           {hit.incorporatedOn && (<><span className="pip" /><span>Incorporated {formatDate(hit.incorporatedOn)}</span></>)}
           <span className="pip" /><span>{hit.companyType}</span>
         </div>
+        {hit.addressSnippet && hit.addressSnippet.trim() && (
+          <div className="small muted" style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            {hit.addressSnippet}
+          </div>
+        )}
       </div>
       <div className="right">
-        <span className="cached">{relativeTime(new Date(Date.now() - 60 * 60 * 1000).toISOString())}</span>
+        <span className="cached">Live</span>
         <Link to={`/app/company/${hit.companyNumber}`} className="btn btn-secondary btn-sm" onClick={(e) => e.stopPropagation()} tabIndex={-1} aria-hidden="true">
           Open report <Icon name="arrow-right" />
         </Link>

@@ -33,6 +33,7 @@ export function CompanyReportPage() {
   const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'done' | 'commenting'>('idle');
   const [feedbackComment, setFeedbackComment] = useState('');
   const [showAllFilings, setShowAllFilings] = useState(false);
+  const [showAllReasons, setShowAllReasons] = useState(false);
 
   const companyName = report?.profile.companyName ?? 'Company report';
   const companyNumber = report?.profile.companyNumber ?? id;
@@ -319,8 +320,8 @@ export function CompanyReportPage() {
               </div>
             )}
 
-            <div className="ticks">
-              {a.topReasons.slice(0, 4).map((r, i) => {
+            <div className="ticks" id="top-reasons-list">
+              {(showAllReasons ? a.topReasons : a.topReasons.slice(0, 4)).map((r, i) => {
                 const src = classifyReason(r);
                 return (
                   <div key={i} className="tick">
@@ -330,6 +331,17 @@ export function CompanyReportPage() {
                 );
               })}
             </div>
+            {a.topReasons.length > 4 && (
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 8 }}
+                aria-expanded={showAllReasons}
+                aria-controls="top-reasons-list"
+                onClick={() => setShowAllReasons(!showAllReasons)}
+              >
+                {showAllReasons ? 'Show fewer' : `Show all ${a.topReasons.length} reasons`}
+              </button>
+            )}
 
             <div className="answer-cta">
               <span className="save-line"><b>{REPORT_SAVE_LINE.split('.')[0]}.</b>{REPORT_SAVE_LINE.split('.').slice(1).join('.')}</span>
@@ -396,7 +408,7 @@ export function CompanyReportPage() {
                   <div>
                     <div className="head-row">
                       <h4>{f.title}</h4>
-                      <span className={cn('zone-tag', f.severity === 'POSITIVE' ? 'direct' : 'deduced')}>{f.severity}</span>
+                      <span className={cn('zone-tag', f.severity === 'POSITIVE' ? 'direct' : f.severity === 'INFO' ? 'not' : 'deduced')}>{f.severity}</span>
                     </div>
                     <p>{f.explanation}</p>
                     <div className="ev">Evidence: {f.evidence}</div>
@@ -606,7 +618,8 @@ export function CompanyReportPage() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className={cn('zone-tag', c.status === 'outstanding' ? 'deduced' : 'direct')}>{c.status}</span>
-                  <div className="small muted">{formatDate(c.createdOn)}</div>
+                  <div className="small muted">Created: {formatDate(c.createdOn)}</div>
+                  {c.deliveredOn && <div className="small muted">Delivered: {formatDate(c.deliveredOn)}</div>}
                 </div>
               </div>
             ))}
@@ -686,7 +699,7 @@ export function CompanyReportPage() {
                   try {
                     await api.submitFeedback({
                       companyNumber,
-                      rating: 0,
+                      rating: -1,
                       useCase: 'report-page',
                       ...(feedbackComment.trim() ? { comment: feedbackComment.trim() } : {}),
                     });
