@@ -110,12 +110,17 @@ export function ComparePage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Add by company name or 8-digit number"
+              onKeyDown={(e) => { if (e.key === 'Escape') { setSuggestions([]); e.preventDefault(); } }}
+              onBlur={() => { window.setTimeout(() => setSuggestions([]), 150); }}
+              role="combobox"
+              aria-expanded={suggestions.length > 0}
+              aria-haspopup="listbox"
             />
           </div>
           <button className="btn btn-primary" type="submit" disabled={numbers.length >= MAX}>Add</button>
         </form>
         {suggestions.length > 0 && (
-          <div style={{
+          <div role="listbox" style={{
             position: 'absolute', top: '100%', left: 0, right: 80, marginTop: 4,
             background: '#fff', border: '1px solid var(--hair)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 10,
             maxHeight: 280, overflow: 'auto',
@@ -123,6 +128,8 @@ export function ComparePage() {
             {suggestions.map((h) => (
               <button
                 key={h.companyNumber}
+                role="option"
+                aria-selected={numbers.includes(h.companyNumber)}
                 onClick={() => addNumber(h.companyNumber)}
                 disabled={numbers.includes(h.companyNumber)}
                 style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 0, padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--hair)' }}
