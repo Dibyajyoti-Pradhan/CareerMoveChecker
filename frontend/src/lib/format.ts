@@ -39,6 +39,34 @@ export function crestInitials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
 }
 
+const SIC_LABELS: Record<string, string> = {
+  '62020': 'Computer programming activities',
+  '62090': 'Other IT activities',
+  '63990': 'Other information service activities',
+  '70229': 'Management consultancy',
+  '74909': 'Other professional activities',
+  '78200': 'Temporary employment agency activities',
+  '78300': 'Human resources provision',
+  '69201': 'Accounting activities',
+  '69202': 'Bookkeeping activities',
+  '64999': 'Other financial services',
+  '66220': 'Insurance agents and brokers',
+  '41100': 'Property development',
+  '68100': 'Buying and selling own real estate',
+  '68209': 'Other letting of property',
+  '56101': 'Restaurants and cafes',
+  '56302': 'Public houses',
+  '47910': 'Retail via internet',
+  '82990': 'Other business support activities',
+  '85600': 'Educational support activities',
+  '86210': 'General medical practice',
+};
+
+export function formatSicCode(code: string): string {
+  const label = SIC_LABELS[code.trim()];
+  return label ? `${code} – ${label}` : code;
+}
+
 // Extract the Companies House company number from a CH URL, path fragment, or raw input.
 // Accepts: full URL (find-and-update.company-information.service.gov.uk/company/09446231),
 //   path fragment (/company/09446231), or bare number/prefix (09446231, SC123456).

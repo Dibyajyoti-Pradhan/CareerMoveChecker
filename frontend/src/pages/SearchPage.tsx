@@ -226,7 +226,15 @@ export function SearchPage() {
 function ResultRow({ hit, q, onOpen }: { hit: CompanySearchHit; q: string; onOpen: () => void }) {
   const statusTone = statusBadgeTone(hit.companyStatus);
   return (
-    <div className="result" onClick={onOpen} style={{ cursor: 'pointer' }}>
+    <div
+      className="result"
+      onClick={onOpen}
+      style={{ cursor: 'pointer' }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View trust report for ${hit.companyName}, company number ${hit.companyNumber}, status ${hit.companyStatus}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
+    >
       <div className="crest">{crestInitials(hit.companyName)}</div>
       <div className="body">
         <h4>{highlightMark(hit.companyName, q)}</h4>
@@ -240,7 +248,7 @@ function ResultRow({ hit, q, onOpen }: { hit: CompanySearchHit; q: string; onOpe
       </div>
       <div className="right">
         <span className="cached">{relativeTime(new Date(Date.now() - 60 * 60 * 1000).toISOString())}</span>
-        <Link to={`/app/company/${hit.companyNumber}`} className="btn btn-secondary btn-sm" onClick={(e) => e.stopPropagation()}>
+        <Link to={`/app/company/${hit.companyNumber}`} className="btn btn-secondary btn-sm" onClick={(e) => e.stopPropagation()} tabIndex={-1} aria-hidden="true">
           Open report <Icon name="arrow-right" />
         </Link>
       </div>

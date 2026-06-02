@@ -16,6 +16,7 @@ export function BulkCheckPage() {
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleRow = (n: string) => setSelected((cur) => {
     const next = new Set(cur);
@@ -104,7 +105,7 @@ export function BulkCheckPage() {
           </a>
           <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer' }}>
             <Icon name="upload" /> Upload CSV
-            <input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={upload} />
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={upload} />
           </label>
         </div>
       </div>
@@ -161,6 +162,35 @@ export function BulkCheckPage() {
             ))}
             {selected.size > 0 && (
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>{selected.size} selected</span>
+            )}
+            {result && result.rows.some((r) => r.bucket === 'avoid' || r.bucket === 'watch') && (
+              <button
+                className="btn btn-secondary btn-sm"
+                aria-label="Copy Avoid and Watch companies as plain text to clipboard"
+                onClick={() => {
+                  const flagged = result.rows.filter(
+                    (r) => r.bucket === 'avoid' || r.bucket === 'watch'
+                  );
+                  const lines = flagged.map((r) => {
+                    const name = r.companyName ?? r.input;
+                    const num = r.companyNumber ? ` (#${r.companyNumber})` : '';
+                    const bucket = r.bucket === 'avoid' ? 'AVOID' : 'WATCH';
+                    const score = r.score != null ? ` · Score: ${r.score}/100` : '';
+                    return `${bucket}  ${name}${num}${score}`;
+                  });
+                  const text = [
+                    `CareerMove bulk check — ${flagged.length} flagged company(ies)`,
+                    `Exported: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+                    '',
+                    ...lines,
+                  ].join('\n');
+                  navigator.clipboard?.writeText(text)
+                    .then(() => setToast({ text: `${flagged.length} flagged companies copied`, tone: 'ok' }))
+                    .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+                }}
+              >
+                Copy flagged
+              </button>
             )}
             <button
               className="btn btn-secondary btn-sm"
@@ -253,6 +283,9 @@ export function BulkCheckPage() {
       {!filename && (
         <div
           className="empty"
+          role="button"
+          tabIndex={0}
+          aria-label="Drop a CSV file here, or press Enter or Space to open the file picker"
           style={{
             marginTop: 32,
             padding: 60,
@@ -264,6 +297,8 @@ export function BulkCheckPage() {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
         >
           <Icon name="upload" size={32} />
           <h3 style={{ margin: '14px 0 6px' }}>{dragOver ? 'Release to upload' : 'Drop a CSV here or click "Upload CSV"'}</h3>
