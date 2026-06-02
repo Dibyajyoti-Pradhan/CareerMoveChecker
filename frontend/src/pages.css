@@ -667,9 +667,12 @@ section.s.tight { padding: 64px 0 96px; }
   .step:not(:first-child) { padding: 28px 0 0 !important; }
   section.s { padding: 64px 0; }
   .answer-body { padding: 28px 22px; }
-  .saved-table .head, .srow { grid-template-columns: 38px 1fr; }
-  .saved-table .head > :not(:nth-child(-n+2)),
-  .srow > :not(:nth-child(-n+2)) { display: none; }
+  .saved-table .head, .srow { grid-template-columns: 38px 1fr auto; }
+  .saved-table .head > :nth-child(3),
+  .srow > :nth-child(3),
+  .saved-table .head > :nth-child(n+5),
+  .srow > :nth-child(n+5) { display: none; }
+  .rail-card { padding: 14px; }
   .results-table .head, .brow { grid-template-columns: 38px 1fr 80px; }
   .results-table .head > :not(:nth-child(-n+3)),
   .brow > :not(:nth-child(-n+3)) { display: none; }
@@ -795,3 +798,20 @@ section.s.tight { padding: 64px 0 96px; }
   color: var(--ink);
   border-color: var(--hair) !important;
 }
+
+@media print {
+  [role="tabpanel"] { display: block !important; }
+  [role="tabpanel"][hidden] { display: block !important; }
+  [role="tabpanel"] + [role="tabpanel"] {
+    border-top: 1px solid #e6e8ee;
+    margin-top: 24px;
+    padding-top: 24px;
+  }
+  .flag, .person, .tl-item { break-inside: avoid; }
+  .flag-grid { grid-template-columns: 1fr !important; }
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .addr-map { display: none !important; }
+}
+
+details[open] > summary svg,
+details[open] > summary .ico { transform: rotate(90deg); transition: transform .15s; }

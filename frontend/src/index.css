@@ -331,4 +331,22 @@ footer.disc strong { color: var(--ink-2); }
   .no-print { display: none !important; }
   .nav, footer { display: none !important; }
   body { background: #fff; }
+
+  /* Interactive elements */
+  .id-actions { display: none !important; }
+  .answer-cta { display: none !important; }
+  .tabs { display: none !important; }
+  .feedback-row { display: none !important; }
+  .addr-map-sv { display: none !important; }
+
+  /* Page setup */
+  @page { size: A4; margin: 18mm 16mm; }
+
+  /* Card rendering */
+  .answer-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  .flag, .data-card, .zone-c .data-card { box-shadow: none !important; }
+
+  /* Print-only elements */
+  .print-header { display: block !important; }
+  .print-disclaimer { display: block !important; }
 }

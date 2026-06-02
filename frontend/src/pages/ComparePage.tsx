@@ -15,12 +15,14 @@ export function ComparePage() {
   const [numbers, setNumbers] = useState<string[]>(initial);
   const [reports, setReports] = useState<CompanyReport[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [input, setInput] = useState('');
 
   useEffect(() => {
     if (numbers.length === 0) { setReports([]); return; }
     setLoading(true);
-    api.compare(numbers).then((r) => { setReports(r); setLoading(false); }).catch(() => setLoading(false));
+    setError(false);
+    api.compare(numbers).then((r) => { setReports(r); setLoading(false); }).catch(() => { setError(true); setLoading(false); });
     setParams(numbers.length ? { numbers: numbers.join(',') } : {});
   }, [numbers.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -142,6 +144,22 @@ export function ComparePage() {
       </div>
 
       {loading && <div className="empty" style={{ margin: 18 }}>Loading…</div>}
+
+      {error && !loading && (
+        <div className="state-card danger">
+          <div className="glyph" style={{ background: 'var(--bad-bg)', color: 'var(--bad)' }}>
+            <Icon name="alert" size={20} />
+          </div>
+          <h3>Comparison failed</h3>
+          <p>We couldn't load one or more reports. Check your company numbers and try again.</p>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => { setError(false); setLoading(true); api.compare(numbers).then(r => { setReports(r); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+          >
+            <Icon name="refresh" /> Try again
+          </button>
+        </div>
+      )}
 
       {!loading && reports.length === 0 && (
         <div className="empty">Add a company number to start comparing.</div>
