@@ -29,6 +29,7 @@ export function CompanyReportPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<TabId>('flags');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'done'>('idle');
 
   const companyName = report?.profile.companyName ?? 'Company report';
   const companyNumber = report?.profile.companyNumber ?? id;
@@ -490,6 +491,52 @@ export function CompanyReportPage() {
         )}
 
       </section>
+
+      {/* Feedback */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0', borderTop: '1px solid var(--hair)', marginTop: 32 }}
+        aria-label="Report feedback"
+      >
+        {feedbackState === 'done' ? (
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Thanks for your feedback.</p>
+        ) : (
+          <>
+            <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>Was this report useful?</span>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={feedbackState === 'submitting'}
+              aria-label="Yes, this report was useful"
+              onClick={async () => {
+                setFeedbackState('submitting');
+                try {
+                  await api.submitFeedback({ companyNumber, rating: 1, useCase: 'report-page' });
+                  setFeedbackState('done');
+                  setToast({ text: 'Thanks for your feedback', tone: 'ok' });
+                } catch {
+                  setFeedbackState('idle');
+                  setToast({ text: 'Could not submit feedback — try again', tone: 'bad' });
+                }
+              }}
+            >👍</button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={feedbackState === 'submitting'}
+              aria-label="No, this report was not useful"
+              onClick={async () => {
+                setFeedbackState('submitting');
+                try {
+                  await api.submitFeedback({ companyNumber, rating: 0, useCase: 'report-page' });
+                  setFeedbackState('done');
+                  setToast({ text: 'Thanks for your feedback', tone: 'ok' });
+                } catch {
+                  setFeedbackState('idle');
+                  setToast({ text: 'Could not submit feedback — try again', tone: 'bad' });
+                }
+              }}
+            >👎</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, useState } from 'react';
+import { ChangeEvent, DragEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
@@ -13,6 +13,13 @@ export function BulkCheckPage() {
   const [filename, setFilename] = useState<string>('');
   const [filter, setFilter] = useState<'all' | 'safe' | 'watch' | 'avoid' | 'unmatched'>('all');
   const [dragOver, setDragOver] = useState(false);
+  const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const processFile = async (file: File) => {
     setFilename(file.name);
@@ -54,6 +61,20 @@ export function BulkCheckPage() {
 
   return (
     <div className="wrap">
+      {toast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 90,
+            background: toast.tone === 'ok' ? 'var(--ok-bg)' : 'var(--bad-bg)',
+            color: toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)',
+            border: `1px solid ${toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)'}`,
+            padding: '10px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          {toast.text}
+        </div>
+      )}
       <div className="page-head">
         <div>
           <p className="small muted"><Link to="/app/saved" style={{ color: 'var(--brand)' }}>Saved</Link> / Bulk check</p>
@@ -121,6 +142,40 @@ export function BulkCheckPage() {
                 {f === 'all' ? 'All' : f === 'safe' ? 'Safe' : f === 'watch' ? 'Watch' : f === 'avoid' ? 'Avoid' : 'Unmatched'}
               </button>
             ))}
+            <button
+              className="btn btn-secondary btn-sm"
+              aria-label="Export bulk check results as CSV"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => {
+                if (!result) return;
+                const header = 'Row,Input,Matched,Company Name,Company Number,Status,Risk Level,Score,Confidence,Bucket';
+                const rows = result.rows.map((r) =>
+                  [
+                    r.index,
+                    `"${r.input.replace(/"/g, '""')}"`,
+                    r.matched ? 'yes' : 'no',
+                    `"${(r.companyName ?? '').replace(/"/g, '""')}"`,
+                    r.companyNumber ?? '',
+                    r.companyStatus ?? '',
+                    r.riskLevel ?? '',
+                    r.score ?? '',
+                    r.confidence ?? '',
+                    r.bucket ?? '',
+                  ].join(',')
+                );
+                const csv = [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `careermove-bulk-${result.uploadId}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                setToast({ text: `Exported ${result.rows.length} rows`, tone: 'ok' });
+              }}
+            >
+              <Icon name="download" /> Export CSV
+            </button>
           </div>
 
           <div className="results-table">

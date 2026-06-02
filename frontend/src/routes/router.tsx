@@ -4,6 +4,7 @@ import { MarketingLayout } from '../layout/MarketingLayout';
 import { AppLayout } from '../layout/AppLayout';
 import { HomePage } from '../pages/HomePage';
 import { MethodologyPage } from '../pages/MethodologyPage';
+import { PricingPage } from '../pages/PricingPage';
 import { SearchPage } from '../pages/SearchPage';
 import { CompanyReportPage } from '../pages/CompanyReportPage';
 import { SavedPage } from '../pages/SavedPage';
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: 'methodology', element: <MethodologyPage /> },
+      { path: 'pricing', element: <PricingPage /> },
     ],
   },
   // Auth

@@ -24,6 +24,7 @@ export function SavedPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
+  const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
 
   // Alerts feed state
   const [feed, setFeed] = useState<FeedResponse | null>(null);
@@ -35,6 +36,12 @@ export function SavedPage() {
       .then((r) => { setFeed(r); setFeedLoading(false); })
       .catch(() => { setFeed({ groups: [], unread: 0, totalCount: 0 }); setFeedLoading(false); });
   };
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     api.listSaved().then(async (r) => {
@@ -96,6 +103,20 @@ export function SavedPage() {
 
   return (
     <div className="wrap">
+      {toast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 90,
+            background: toast.tone === 'ok' ? 'var(--ok-bg)' : 'var(--bad-bg)',
+            color: toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)',
+            border: `1px solid ${toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)'}`,
+            padding: '10px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          {toast.text}
+        </div>
+      )}
       <div className="page-head">
         <div>
           <h1>Saved companies</h1>
@@ -193,7 +214,33 @@ export function SavedPage() {
           <div className="btns">
             <Link to={`/app/compare?numbers=${[...selected].join(',')}`} className="btn btn-ghost btn-sm"><Icon name="compare" /> Compare</Link>
             <button className="btn btn-ghost btn-sm"><Icon name="refresh" /> Refresh</button>
-            <button className="btn btn-ghost btn-sm"><Icon name="download" /> Export PDF</button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={items.length === 0}
+              aria-label="Export saved companies as CSV"
+              onClick={() => {
+                const header = 'Company Name,Company Number,Note,Saved On';
+                const rows = items.map((s) =>
+                  [
+                    `"${s.companyName.replace(/"/g, '""')}"`,
+                    s.companyNumber,
+                    `"${(s.note ?? '').replace(/"/g, '""')}"`,
+                    s.createdAt.slice(0, 10),
+                  ].join(',')
+                );
+                const csv = [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'careermove-saved.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                setToast({ text: `Exported ${items.length} companies`, tone: 'ok' });
+              }}
+            >
+              <Icon name="download" /> Export CSV
+            </button>
             <button className="btn btn-ghost btn-sm" onClick={() => selected.forEach(remove)}><Icon name="trash" /> Remove</button>
           </div>
         </div>
