@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, useEffect, useState } from 'react';
+import { ChangeEvent, DragEvent, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
@@ -14,12 +14,29 @@ export function BulkCheckPage() {
   const [filter, setFilter] = useState<'all' | 'safe' | 'watch' | 'avoid' | 'unmatched'>('all');
   const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  const toggleRow = (n: string) => setSelected((cur) => {
+    const next = new Set(cur);
+    next.has(n) ? next.delete(n) : next.add(n);
+    return next;
+  });
 
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2400);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    if (!selectAllRef.current || !result) return;
+    const eligible = filtered.filter(r => r.companyNumber);
+    const allChecked = eligible.length > 0 && eligible.every(r => selected.has(r.companyNumber!));
+    const someChecked = eligible.some(r => selected.has(r.companyNumber!));
+    selectAllRef.current.indeterminate = someChecked && !allChecked;
+    selectAllRef.current.checked = allChecked;
+  }, [selected, filtered, result]);
 
   const processFile = async (file: File) => {
     setFilename(file.name);
@@ -142,6 +159,9 @@ export function BulkCheckPage() {
                 {f === 'all' ? 'All' : f === 'safe' ? 'Safe' : f === 'watch' ? 'Watch' : f === 'avoid' ? 'Avoid' : 'Unmatched'}
               </button>
             ))}
+            {selected.size > 0 && (
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{selected.size} selected</span>
+            )}
             <button
               className="btn btn-secondary btn-sm"
               aria-label="Export bulk check results as CSV"
@@ -180,12 +200,31 @@ export function BulkCheckPage() {
 
           <div className="results-table">
             <div className="head">
-              <span>#</span><span></span><span>Company</span><span>Status</span><span>Verdict</span><span>Confidence</span><span></span>
+              <span>#</span>
+              <span>
+                <input
+                  type="checkbox"
+                  ref={selectAllRef}
+                  onChange={(e) => {
+                    const eligible = filtered.filter(r => r.companyNumber);
+                    if (e.target.checked) {
+                      setSelected(new Set(eligible.map(r => r.companyNumber!)));
+                    } else {
+                      setSelected(new Set());
+                    }
+                  }}
+                />
+              </span>
+              <span>Company</span><span>Status</span><span>Verdict</span><span>Confidence</span><span></span>
             </div>
             {filtered.map((r) => (
               <div key={r.index} className="brow">
                 <span className="ix">{String(r.index).padStart(3, '0')}</span>
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={r.companyNumber ? selected.has(r.companyNumber) : false}
+                  onChange={() => r.companyNumber && toggleRow(r.companyNumber)}
+                />
                 <div>
                   <div style={{ fontWeight: 500 }}>{r.companyName ?? r.input}</div>
                   <div className="small muted mono">{r.companyNumber ? `#${r.companyNumber}` : `input: ${r.input}`}</div>

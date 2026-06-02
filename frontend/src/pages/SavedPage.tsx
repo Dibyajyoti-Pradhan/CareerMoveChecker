@@ -23,6 +23,7 @@ export function SavedPage() {
   const [filter, setFilter] = useState<typeof FILTERS[number]>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editingNote, setEditingNote] = useState<string | null>(null);
   const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
   const [sort, setSort] = useState<'recent' | 'name' | 'score'>('recent');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
@@ -309,8 +310,36 @@ export function SavedPage() {
                 const fresh = await api.refreshReport(s.companyNumber).catch(() => null);
                 setReports((cur) => ({ ...cur, [s.companyNumber]: fresh }));
               }}><Icon name="refresh" size={14} /></button>
+              <button className="icon-btn" title={s.note ? 'Edit note' : 'Add note'} onClick={() => setEditingNote(s.companyNumber)}>
+                <Icon name="edit" size={14} />
+              </button>
               <button className="icon-btn" onClick={() => remove(s.companyNumber)} title="Remove"><Icon name="trash" size={14} /></button>
             </div>
+            {editingNote === s.companyNumber && (
+              <div style={{ gridColumn: '1 / -1', paddingLeft: 8, paddingTop: 4 }}>
+                <input
+                  autoFocus
+                  defaultValue={s.note ?? ''}
+                  placeholder="Add a note…"
+                  onBlur={async (e) => {
+                    const note = e.target.value.trim();
+                    await api.updateSavedNote(s.companyNumber, note).catch(() => {});
+                    setItems((cur) => cur.map((x) => x.companyNumber === s.companyNumber ? { ...x, note } : x));
+                    setEditingNote(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setEditingNote(null);
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  }}
+                  style={{ fontSize: 12, border: '1px solid var(--line)', borderRadius: 6, padding: '3px 8px', width: '100%', maxWidth: 320, background: 'var(--canvas)' }}
+                />
+              </div>
+            )}
+            {s.note && editingNote !== s.companyNumber && (
+              <div style={{ gridColumn: '1 / -1', paddingLeft: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.note}</span>
+              </div>
+            )}
           </div>
           );
         })}
