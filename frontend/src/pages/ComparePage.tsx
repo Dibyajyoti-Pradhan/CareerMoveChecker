@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
 import type { CompanyReport, CompanySearchHit } from '../types';
-import { crestInitials, formatDate, yearsSince } from '../lib/format';
+import { crestInitials, formatDate, formatSicCode, yearsSince } from '../lib/format';
 import { cn } from '../lib/cn';
 import { COMPARE_H1, COMPARE_SUB, HERO_QUESTION } from '../lib/persona-copy';
 
@@ -198,7 +198,7 @@ export function ComparePage() {
           <Row label="Verdict" cells={reports.map((r) => ({
             tone: r.assessment.riskLevel === 'LOW' ? 'ok' : r.assessment.riskLevel === 'MODERATE' ? 'warn' : 'bad',
             val: r.assessment.riskLevel === 'LOW' ? 'Probably yes' : r.assessment.riskLevel === 'CRITICAL' ? 'Avoid' : 'Caution',
-            sub: r.assessment.verdict.slice(0, 80) + '…',
+            sub: truncateAtWord(r.assessment.verdict, 80),
           }))} bestIdx={findBest(reports)} worstIdx={findWorst(reports)} />
 
           <Row label="Company type" cells={reports.map((r) => ({
@@ -207,11 +207,14 @@ export function ComparePage() {
             sub: '',
           }))} />
 
-          <Row label="Industry (SIC)" cells={reports.map((r) => ({
-            tone: 'ok' as const,
-            val: r.profile.sicCodes?.join(', ') || '—',
-            sub: '',
-          }))} />
+          <Row label="Industry (SIC)" cells={reports.map((r) => {
+            const codes = r.profile.sicCodes ?? [];
+            return {
+              tone: 'ok' as const,
+              val: codes.length > 0 ? codes.map(formatSicCode).join(' · ') : '—',
+              sub: '',
+            };
+          })} />
 
           <Row label="Trading history" cells={reports.map((r) => {
             const y = yearsSince(r.profile.incorporatedOn);
@@ -299,4 +302,11 @@ function findWorst(reports: CompanyReport[]): number {
   let worst = 0;
   reports.forEach((r, i) => { if (r.assessment.score < reports[worst].assessment.score) worst = i; });
   return worst;
+}
+
+function truncateAtWord(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut) + '…';
 }

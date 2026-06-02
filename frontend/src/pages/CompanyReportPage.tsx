@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
 import type { CompanyReport } from '../types';
-import { crestInitials, formatDate, relativeTime, yearsSince } from '../lib/format';
+import { crestInitials, formatDate, formatSicCode, relativeTime, yearsSince } from '../lib/format';
 import { cn } from '../lib/cn';
 import { REPORT_QUESTION, REPORT_SAVE_LINE, REPORT_SAVE_CTA } from '../lib/persona-copy';
 import { useSeo } from '../lib/seo';
@@ -30,7 +30,8 @@ export function CompanyReportPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<TabId>('flags');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
-  const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'done'>('idle');
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'done' | 'commenting'>('idle');
+  const [feedbackComment, setFeedbackComment] = useState('');
   const [showAllFilings, setShowAllFilings] = useState(false);
 
   const companyName = report?.profile.companyName ?? 'Company report';
@@ -256,7 +257,7 @@ export function CompanyReportPage() {
           <div className="it"><span className="label">Company no.</span><span className="val">#{p.companyNumber}</span></div>
           <div className="it"><span className="label">Incorporated</span><span className="val">{formatDate(p.incorporatedOn)}{years !== null && ` · ${years}y`}</span></div>
           <div className="it"><span className="label">Type</span><span className="val">{p.companyType}</span></div>
-          <div className="it"><span className="label">SIC</span><span className="val">{p.sicCodes?.join(', ') || '—'}</span></div>
+          <div className="it"><span className="label">SIC</span><span className="val">{p.sicCodes?.map(formatSicCode).join(' · ') || '—'}</span></div>
         </div>
       </section>
 
@@ -300,9 +301,22 @@ export function CompanyReportPage() {
             <h3 className="answer-h"><em>{verdict.headline}</em></h3>
             <p className="answer-verdict">{a.verdict}</p>
             {a.explanationSummary && (
-              <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginTop: 8, marginBottom: 0 }}>
-                {a.explanationSummary}
-              </p>
+              <div
+                className="explanation-summary"
+                style={{
+                  marginTop: 12,
+                  marginBottom: 4,
+                  padding: '12px 14px',
+                  background: 'var(--canvas)',
+                  border: '1px solid var(--hair)',
+                  borderLeft: '3px solid var(--brand)',
+                  borderRadius: 10,
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.65 }}>
+                  {a.explanationSummary}
+                </p>
+              </div>
             )}
 
             <div className="ticks">
@@ -674,17 +688,7 @@ export function CompanyReportPage() {
               className="btn btn-ghost btn-sm"
               disabled={feedbackState === 'submitting'}
               aria-label="No, this report was not useful"
-              onClick={async () => {
-                setFeedbackState('submitting');
-                try {
-                  await api.submitFeedback({ companyNumber, rating: 0, useCase: 'report-page' });
-                  setFeedbackState('done');
-                  setToast({ text: 'Thanks for your feedback', tone: 'ok' });
-                } catch {
-                  setFeedbackState('idle');
-                  setToast({ text: 'Could not submit feedback — try again', tone: 'bad' });
-                }
-              }}
+              onClick={() => { setFeedbackComment(''); setFeedbackState('commenting'); }}
             >👎</button>
           </>
         )}
