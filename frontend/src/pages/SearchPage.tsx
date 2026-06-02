@@ -9,6 +9,16 @@ import { useSeo } from '../lib/seo';
 
 const TRY_CHIPS = ['Monzo Bank Limited', 'Deliveroo Plc', 'Greggs Plc', '09446231'];
 
+const RECENT_KEY = 'cmc.recent';
+const MAX_RECENT = 5;
+function getRecentSearches(): { name: string; number: string }[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]'); } catch { return []; }
+}
+function addRecentSearch(name: string, number: string) {
+  const cur = getRecentSearches().filter((r) => r.number !== number);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([{ name, number }, ...cur].slice(0, MAX_RECENT)));
+}
+
 export function SearchPage() {
   useSeo({
     title: 'Search UK companies — CareerMove',
@@ -21,6 +31,7 @@ export function SearchPage() {
   const [hits, setHits] = useState<CompanySearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(Boolean(initialQ));
+  const [recent, setRecent] = useState(() => getRecentSearches());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -96,6 +107,20 @@ export function SearchPage() {
           <div>
             {!searched && (
               <div className="idle-grid">
+                {recent.length > 0 && (
+                  <div className="recent-mini" style={{ marginBottom: 16 }}>
+                    <h5>Recent searches</h5>
+                    {recent.map((r) => (
+                      <button key={r.number} className="rrow" onClick={() => navigate(`/app/company/${r.number}`)} style={{ background: 'transparent', border: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }} aria-label={`View report for ${r.name}`}>
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: 13 }}>{r.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>#{r.number}</div>
+                        </div>
+                        <Icon name="arrow-right" size={12} />
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="recent-mini">
                   <h5>Try one of these</h5>
                   {TRY_CHIPS.map((c) => (
@@ -115,16 +140,29 @@ export function SearchPage() {
             )}
 
             {noResults && (
-              <div className="state-card">
-                <div className="glyph"><Icon name="search" size={20} /></div>
-                <h3>No matches for "{initialQ}"</h3>
-                <p>Check the spelling, or paste the 8-character company number.</p>
-                <div className="suggestions">
+              <>
+                <div className="state-card">
+                  <div className="glyph"><Icon name="search" size={20} /></div>
+                  <h3>No companies found for '{initialQ}'</h3>
+                  <ul style={{ textAlign: 'left', margin: '12px 0', paddingLeft: 20, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.7 }}>
+                    <li>Try the 8-digit company number (e.g. <span style={{ fontFamily: 'var(--mono)' }}>09446231</span>) for an exact match.</li>
+                    <li>New companies can take up to 24 hours to appear after incorporation.</li>
+                  </ul>
+                  <a
+                    className="btn btn-secondary btn-sm"
+                    href={`https://find-and-update.company-information.service.gov.uk/company-overview?lang=en&q=${encodeURIComponent(initialQ)}`}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Search on Companies House <Icon name="external" />
+                  </a>
+                </div>
+                <div className="suggestions" style={{ marginTop: 16 }}>
                   {TRY_CHIPS.map((c) => (
                     <button key={c} className="chip" onClick={() => { setQ(c); setParams({ q: c }); }}>{c}</button>
                   ))}
                 </div>
-              </div>
+              </>
             )}
 
             {!loading && hits.length > 0 && (
@@ -135,7 +173,11 @@ export function SearchPage() {
                 </div>
                 <div className="result-list">
                   {hits.map((h) => (
-                    <ResultRow key={h.companyNumber} hit={h} q={initialQ} onOpen={() => navigate(`/app/company/${h.companyNumber}`)} />
+                    <ResultRow key={h.companyNumber} hit={h} q={initialQ} onOpen={() => {
+                      addRecentSearch(h.companyName, h.companyNumber);
+                      setRecent(getRecentSearches());
+                      navigate(`/app/company/${h.companyNumber}`);
+                    }} />
                   ))}
                 </div>
               </>

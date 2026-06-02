@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { useSeo } from '../lib/seo';
+import { ScoreGauge } from '../components/ScoreGauge';
+import { cn } from '../lib/cn';
 
 const ANCHORS = [
   { id: 'zones', ix: '01', label: 'Three zones' },
@@ -40,6 +43,51 @@ const RECIPE: { w: string; h: string; p: string; impact: string }[] = [
   { w: '+5', h: 'No insolvency records', p: 'Clean insolvency register and not dissolved or in wind-up.', impact: 'POSITIVE' },
   { w: '+5', h: 'Ownership straightforward', p: 'PSC list returns clear beneficial ownership.', impact: 'POSITIVE' },
 ];
+
+function ScoreCalculator() {
+  const [active, setActive] = useState<Set<string>>(new Set());
+  const toggle = (h: string) => setActive((prev) => {
+    const next = new Set(prev);
+    next.has(h) ? next.delete(h) : next.add(h);
+    return next;
+  });
+  const score = Math.max(0, Math.min(100, RECIPE.reduce((acc, r) => {
+    if (!active.has(r.h)) return acc;
+    const raw = r.w.replace('−', '-').replace('+', '');
+    const n = parseInt(raw);
+    return acc + (isNaN(n) ? 0 : n);
+  }, 75)));
+  return (
+    <section aria-label="Score calculator" style={{ marginTop: 40, marginBottom: 0 }}>
+      <div className="s-head">
+        <div>
+          <div className="s-eyebrow">Try it</div>
+          <h2 className="s-title">Build a scenario.</h2>
+        </div>
+        <p className="s-lead">Toggle signals to see how the score moves. Starts at 75.</p>
+      </div>
+      <div className="builder">
+        <div className="builder-body">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+            {RECIPE.map((r) => (
+              <button
+                key={r.h}
+                aria-pressed={active.has(r.h)}
+                onClick={() => toggle(r.h)}
+                className={cn('chip', active.has(r.h) ? 'active' : '')}
+                style={{ fontSize: 12 }}
+              >
+                <span style={{ fontFamily: 'var(--mono)', marginRight: 4 }}>{r.w}</span>
+                {r.h}
+              </button>
+            ))}
+          </div>
+          <ScoreGauge score={score} confidence={0.8} />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function MethodologyPage() {
   useSeo({
@@ -155,6 +203,12 @@ export function MethodologyPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="s" id="calculator">
+        <div className="wrap">
+          <ScoreCalculator />
         </div>
       </section>
 

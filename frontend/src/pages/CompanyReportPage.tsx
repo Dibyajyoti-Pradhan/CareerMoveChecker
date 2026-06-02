@@ -7,6 +7,7 @@ import { crestInitials, formatDate, relativeTime, yearsSince } from '../lib/form
 import { cn } from '../lib/cn';
 import { REPORT_QUESTION, REPORT_SAVE_LINE, REPORT_SAVE_CTA } from '../lib/persona-copy';
 import { useSeo } from '../lib/seo';
+import { ScoreGauge } from '../components/ScoreGauge';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -28,6 +29,7 @@ export function CompanyReportPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<TabId>('flags');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'done'>('idle');
 
   const companyName = report?.profile.companyName ?? 'Company report';
   const companyNumber = report?.profile.companyNumber ?? id;
@@ -111,6 +113,14 @@ export function CompanyReportPage() {
   const years = yearsSince(p.incorporatedOn);
   const verdict = pickVerdict(a.riskLevel);
 
+  const canonicalUrl = `https://careermove.uk/c/${p.companyNumber}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard?.writeText(canonicalUrl)
+      .then(() => setToast({ text: 'Link copied to clipboard', tone: 'ok' }))
+      .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+  };
+
   return (
     <div className="wrap">
       {toast && (
@@ -155,6 +165,22 @@ export function CompanyReportPage() {
               <Link className="btn btn-secondary btn-sm" to={`/app/compare?numbers=${p.companyNumber}`}>
                 <Icon name="compare" /> Compare
               </Link>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleCopyLink}
+                aria-label="Copy report link to clipboard"
+              >
+                <Icon name="copy" /> Copy link
+              </button>
+              <a
+                className="btn btn-secondary btn-sm"
+                href={`https://find-and-update.company-information.service.gov.uk/company/${p.companyNumber}`}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={`Open ${report.profile.companyName} on Companies House (opens in new tab)`}
+              >
+                <Icon name="external" /> Companies House
+              </a>
             </div>
           </div>
         </div>
@@ -179,6 +205,10 @@ export function CompanyReportPage() {
                   : 'No disqualified officers detected on the current board.'}
               </div>
             )}
+
+            <div style={{ marginBottom: 24 }}>
+              <ScoreGauge score={a.score} confidence={a.confidence} />
+            </div>
 
             <div className="answer-q">{REPORT_QUESTION}</div>
             <h3 className="answer-h"><em>{verdict.headline}</em></h3>
@@ -208,18 +238,24 @@ export function CompanyReportPage() {
               }}>
                 <Icon name="star" /> {REPORT_SAVE_CTA}
               </button>
-              <button className="btn btn-secondary btn-sm" onClick={() => {
-                const block = [
-                  p.companyName,
-                  `Company no. ${p.companyNumber}`,
-                  p.registeredOffice?.line1,
-                  p.registeredOffice?.line2,
-                  [p.registeredOffice?.locality, p.registeredOffice?.postalCode].filter(Boolean).join(', '),
-                  p.registeredOffice?.country,
-                ].filter(Boolean).join('\n');
-                navigator.clipboard?.writeText(block).then(() => setToast({ text: 'Invoice block copied to clipboard', tone: 'ok' }));
-              }}>
-                <Icon name="copy" /> Copy invoice block
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleCopyLink}
+                aria-label="Copy report link to clipboard"
+              >
+                <Icon name="copy" /> Copy link
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  const summary = `${report.profile.companyName} · ${p.companyNumber} · Risk level: ${a.riskLevel} · Score: ${a.score}/100 · ${a.verdict} · ${canonicalUrl}`;
+                  navigator.clipboard?.writeText(summary)
+                    .then(() => setToast({ text: 'Summary copied to clipboard', tone: 'ok' }))
+                    .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+                }}
+                aria-label="Copy shareable summary to clipboard"
+              >
+                <Icon name="external" /> Share summary
               </button>
             </div>
           </div>
@@ -237,25 +273,47 @@ export function CompanyReportPage() {
         </div>
 
         {tab === 'flags' && (
-          <div className="flag-grid" style={{ marginTop: 18 }}>
-            {a.flags.map((f) => (
-              <div key={f.id} className="flag">
-                <span className={cn('m', f.severity === 'CRITICAL' && 'bad', f.severity === 'WARNING' && 'warn', (f.severity === 'POSITIVE' || f.severity === 'INFO') && 'ok')}>
-                  <Icon name={f.severity === 'CRITICAL' || f.severity === 'WARNING' ? 'warn' : 'check'} size={12} />
-                </span>
-                <div>
-                  <div className="head-row">
-                    <h4>{f.title}</h4>
-                    <span className={cn('zone-tag', f.severity === 'POSITIVE' ? 'direct' : 'deduced')}>{f.severity}</span>
+          <>
+            <div className="flag-grid" style={{ marginTop: 18 }}>
+              {a.flags.map((f) => (
+                <div key={f.id} className="flag">
+                  <span className={cn('m', f.severity === 'CRITICAL' && 'bad', f.severity === 'WARNING' && 'warn', (f.severity === 'POSITIVE' || f.severity === 'INFO') && 'ok')}>
+                    <Icon name={f.severity === 'CRITICAL' || f.severity === 'WARNING' ? 'warn' : 'check'} size={12} />
+                  </span>
+                  <div>
+                    <div className="head-row">
+                      <h4>{f.title}</h4>
+                      <span className={cn('zone-tag', f.severity === 'POSITIVE' ? 'direct' : 'deduced')}>{f.severity}</span>
+                    </div>
+                    <p>{f.explanation}</p>
+                    <div className="ev">Evidence: {f.evidence}</div>
+                    <div className="reco">{f.recommendedAction}</div>
                   </div>
-                  <p>{f.explanation}</p>
-                  <div className="ev">Evidence: {f.evidence}</div>
-                  <div className="reco">{f.recommendedAction}</div>
                 </div>
-              </div>
-            ))}
-            {a.flags.length === 0 && <div className="empty">No flags raised. Clean across all checked signals.</div>}
-          </div>
+              ))}
+              {a.flags.length === 0 && <div className="empty">No flags raised. Clean across all checked signals.</div>}
+            </div>
+            {a.recommendedActions && a.recommendedActions.length > 0 && (
+              <section aria-label="Recommended next steps" style={{ marginTop: 24 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'var(--mono)', marginBottom: 12 }}>
+                  Recommended next steps
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {a.recommendedActions.map((ra, i) => (
+                    <div key={ra.id} style={{ background: 'var(--canvas)', border: '1px solid var(--hair)', borderLeft: '3px solid var(--brand)', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--brand)', fontWeight: 600, paddingTop: 2, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{ra.title}</div>
+                          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{ra.detail}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         {tab === 'identity' && (
@@ -278,9 +336,19 @@ export function CompanyReportPage() {
           </div>
         )}
 
-        {tab === 'people' && (
+        {tab === 'people' && (() => {
+          const officersWithDissolvedHistory = report.officers.filter(o =>
+            o.previousCompanies?.some(pc => pc.status === 'dissolved' || pc.status === 'liquidation')
+          );
+          const showDirectorSummary = officersWithDissolvedHistory.length > 0 && report.officers.some(o => o.previousCompanies);
+          return (
           <div className="grid-2" style={{ marginTop: 18 }}>
             <div className="data-card">
+              {showDirectorSummary && (
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+                  {officersWithDissolvedHistory.length} of {report.officers.length} director{report.officers.length !== 1 ? 's' : ''} have been associated with dissolved companies.
+                </p>
+              )}
               <h3>Officers ({report.officers.length})</h3>
               {report.officers.length === 0 && <div className="empty">No officers returned.</div>}
               {report.officers.map((o, i) => (
@@ -291,6 +359,93 @@ export function CompanyReportPage() {
                     <div className="role">{o.role}{o.occupation && ` · ${o.occupation}`}</div>
                   </div>
                   <div className="when">{o.resignedOn ? `Resigned ${formatDate(o.resignedOn)}` : `Active since ${formatDate(o.appointedOn)}`}</div>
+                  {o.previousCompanies && o.previousCompanies.length > 0 && (() => {
+                    const hasProblematic = o.previousCompanies!.some(
+                      pc => pc.status === 'dissolved' || pc.status === 'liquidation'
+                    );
+                    return (
+                      <div style={{ gridColumn: '1 / -1', paddingLeft: 50, marginTop: 8 }}>
+                        {hasProblematic ? (
+                          <>
+                            <span className="zone-tag deduced" aria-label="Previously associated with dissolved companies">
+                              ⚠ Previously associated with dissolved companies
+                            </span>
+                            <details style={{ marginTop: 10 }}>
+                              <summary
+                                style={{
+                                  cursor: 'pointer',
+                                  fontSize: 13,
+                                  color: 'var(--brand)',
+                                  fontWeight: 500,
+                                  listStyle: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                                aria-label={`Toggle director history for ${o.name}`}
+                              >
+                                <span className="zone-tag deduced" style={{ fontSize: 10, padding: '2px 6px' }}>Deduced</span>
+                                Director history
+                                <Icon name="chevron-right" size={12} />
+                              </summary>
+                              <div style={{ marginTop: 10 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                                  <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--hair)' }}>
+                                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: 'var(--ink-2)', fontSize: 11, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company</th>
+                                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: 'var(--ink-2)', fontSize: 11, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</th>
+                                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: 'var(--ink-2)', fontSize: 11, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ceased</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {o.previousCompanies!.map((pc, j) => (
+                                      <tr key={j} style={{ borderBottom: '1px solid var(--hair)' }}>
+                                        <td style={{ padding: '8px 8px' }}>
+                                          <a
+                                            href={`https://find-and-update.company-information.service.gov.uk/company/${pc.number}`}
+                                            target="_blank"
+                                            rel="noreferrer noopener"
+                                            style={{ color: 'var(--brand)', textDecoration: 'none' }}
+                                            aria-label={`Open ${pc.name} on Companies House (opens in new tab)`}
+                                          >
+                                            {pc.name}
+                                          </a>
+                                        </td>
+                                        <td style={{ padding: '8px 8px' }}>
+                                          <span
+                                            className={
+                                              pc.status === 'active'
+                                                ? 'zone-tag direct'
+                                                : pc.status === 'liquidation'
+                                                ? 'zone-tag deduced'
+                                                : 'zone-tag not'
+                                            }
+                                            aria-label={`Status: ${pc.status}`}
+                                          >
+                                            {pc.status}
+                                          </span>
+                                        </td>
+                                        <td style={{ padding: '8px 8px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>
+                                          {pc.ceasedOn ? formatDate(pc.ceasedOn) : '—'}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                                <p style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+                                  Director history is drawn from public Companies House records and may not be complete. This is not a credit check.
+                                </p>
+                              </div>
+                            </details>
+                          </>
+                        ) : (
+                          <span className="zone-tag direct" aria-label="No dissolved company associations">
+                            ✓ No dissolved company associations
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -309,7 +464,8 @@ export function CompanyReportPage() {
               ))}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {tab === 'finance' && (
           <div className="data-card">
@@ -357,6 +513,52 @@ export function CompanyReportPage() {
         )}
 
       </section>
+
+      {/* Feedback */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0', borderTop: '1px solid var(--hair)', marginTop: 32 }}
+        aria-label="Report feedback"
+      >
+        {feedbackState === 'done' ? (
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Thanks for your feedback.</p>
+        ) : (
+          <>
+            <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>Was this report useful?</span>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={feedbackState === 'submitting'}
+              aria-label="Yes, this report was useful"
+              onClick={async () => {
+                setFeedbackState('submitting');
+                try {
+                  await api.submitFeedback({ companyNumber, rating: 1, useCase: 'report-page' });
+                  setFeedbackState('done');
+                  setToast({ text: 'Thanks for your feedback', tone: 'ok' });
+                } catch {
+                  setFeedbackState('idle');
+                  setToast({ text: 'Could not submit feedback — try again', tone: 'bad' });
+                }
+              }}
+            >👍</button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={feedbackState === 'submitting'}
+              aria-label="No, this report was not useful"
+              onClick={async () => {
+                setFeedbackState('submitting');
+                try {
+                  await api.submitFeedback({ companyNumber, rating: 0, useCase: 'report-page' });
+                  setFeedbackState('done');
+                  setToast({ text: 'Thanks for your feedback', tone: 'ok' });
+                } catch {
+                  setFeedbackState('idle');
+                  setToast({ text: 'Could not submit feedback — try again', tone: 'bad' });
+                }
+              }}
+            >👎</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

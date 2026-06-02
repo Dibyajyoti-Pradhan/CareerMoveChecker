@@ -69,6 +69,35 @@ export function ComparePage() {
           <h1>{COMPARE_H1}</h1>
           <p className="sub">{COMPARE_SUB}</p>
         </div>
+        {reports.length > 0 && (
+          <div className="head-actions">
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                const header = 'Company,Number,Status,Score,Risk Level,Insolvency,Accounts Overdue,Outstanding Charges,Officers (active)';
+                const rows = reports.map((r) => [
+                  `"${r.profile.companyName.replace(/"/g, '""')}"`,
+                  r.profile.companyNumber,
+                  r.profile.companyStatus,
+                  r.assessment.score,
+                  r.assessment.riskLevel,
+                  r.insolvency.length,
+                  r.profile.accountsOverdue ? 'yes' : 'no',
+                  r.charges.filter((c) => c.status === 'outstanding').length,
+                  r.officers.filter((o) => !o.resignedOn).length,
+                ].join(','));
+                const csv = [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'careermove-compare.csv'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Icon name="download" /> Export CSV
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ position: 'relative', maxWidth: 480, marginBottom: 14 }}>
@@ -142,6 +171,12 @@ export function ComparePage() {
             ))}
           </div>
 
+          <Row label="Score" cells={reports.map((r) => ({
+            tone: r.assessment.score >= 70 ? 'ok' as const : r.assessment.score >= 40 ? 'warn' as const : 'bad' as const,
+            val: `${r.assessment.score} / 100`,
+            sub: `Confidence: ${Math.round(r.assessment.confidence * 100)}%`,
+          }))} bestIdx={findBest(reports)} worstIdx={findWorst(reports)} />
+
           <Row label="Verdict" cells={reports.map((r) => ({
             tone: r.assessment.riskLevel === 'LOW' ? 'ok' : r.assessment.riskLevel === 'MODERATE' ? 'warn' : 'bad',
             val: r.assessment.riskLevel === 'LOW' ? 'Probably yes' : r.assessment.riskLevel === 'CRITICAL' ? 'Avoid' : 'Caution',
@@ -175,6 +210,20 @@ export function ComparePage() {
             val: `${r.officers.filter((o) => !o.resignedOn).length} active`,
             sub: `${r.officers.length} total in record`,
           }))} />
+
+          <Row label="Disqualified officers" cells={reports.map((r) => {
+            if (!r.disqualificationCheck) {
+              return { tone: 'ok' as const, val: '—', sub: 'Not checked (Agency tier)' };
+            }
+            const isMatch = r.disqualificationCheck.status === 'MATCH';
+            return {
+              tone: isMatch ? 'bad' as const : 'ok' as const,
+              val: isMatch ? `${r.disqualificationCheck.matches.length} match(es)` : 'Clear',
+              sub: isMatch
+                ? r.disqualificationCheck.matches.map((m) => m.name).join(', ')
+                : 'No disqualified officers found',
+            };
+          })} />
         </div>
       )}
     </div>

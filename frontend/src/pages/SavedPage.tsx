@@ -24,6 +24,8 @@ export function SavedPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
+  const [sort, setSort] = useState<'recent' | 'name' | 'score'>('recent');
+  const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
 
   // Alerts feed state
   const [feed, setFeed] = useState<FeedResponse | null>(null);
@@ -35,6 +37,12 @@ export function SavedPage() {
       .then((r) => { setFeed(r); setFeedLoading(false); })
       .catch(() => { setFeed({ groups: [], unread: 0, totalCount: 0 }); setFeedLoading(false); });
   };
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     api.listSaved().then(async (r) => {
@@ -80,6 +88,16 @@ export function SavedPage() {
     return bucketFor(s.companyNumber) === filter;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'name') return a.companyName.localeCompare(b.companyName);
+    if (sort === 'score') {
+      const sa = reports[a.companyNumber]?.assessment.score ?? -1;
+      const sb = reports[b.companyNumber]?.assessment.score ?? -1;
+      return sa - sb;
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
   const remove = async (n: string) => {
     await api.removeSaved(n).catch(() => {});
     setItems((cur) => cur.filter((s) => s.companyNumber !== n));
@@ -96,6 +114,20 @@ export function SavedPage() {
 
   return (
     <div className="wrap">
+      {toast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 90,
+            background: toast.tone === 'ok' ? 'var(--ok-bg)' : 'var(--bad-bg)',
+            color: toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)',
+            border: `1px solid ${toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)'}`,
+            padding: '10px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          {toast.text}
+        </div>
+      )}
       <div className="page-head">
         <div>
           <h1>Saved companies</h1>
@@ -183,7 +215,11 @@ export function SavedPage() {
         ))}
         <div className="sort">
           Sort:
-          <select><option>Recently updated</option><option>Name A-Z</option><option>Risk score</option></select>
+          <select aria-label="Sort companies by" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+            <option value="recent">Recently updated</option>
+            <option value="name">Name A-Z</option>
+            <option value="score">Risk score</option>
+          </select>
         </div>
       </div>
 
@@ -193,7 +229,33 @@ export function SavedPage() {
           <div className="btns">
             <Link to={`/app/compare?numbers=${[...selected].join(',')}`} className="btn btn-ghost btn-sm"><Icon name="compare" /> Compare</Link>
             <button className="btn btn-ghost btn-sm"><Icon name="refresh" /> Refresh</button>
-            <button className="btn btn-ghost btn-sm"><Icon name="download" /> Export PDF</button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={items.length === 0}
+              aria-label="Export saved companies as CSV"
+              onClick={() => {
+                const header = 'Company Name,Company Number,Note,Saved On';
+                const rows = items.map((s) =>
+                  [
+                    `"${s.companyName.replace(/"/g, '""')}"`,
+                    s.companyNumber,
+                    `"${(s.note ?? '').replace(/"/g, '""')}"`,
+                    s.createdAt.slice(0, 10),
+                  ].join(',')
+                );
+                const csv = [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'careermove-saved.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                setToast({ text: `Exported ${items.length} companies`, tone: 'ok' });
+              }}
+            >
+              <Icon name="download" /> Export CSV
+            </button>
             <button className="btn btn-ghost btn-sm" onClick={() => selected.forEach(remove)}><Icon name="trash" /> Remove</button>
           </div>
         </div>
@@ -209,10 +271,10 @@ export function SavedPage() {
           <span></span>
         </div>
         {loading && [0, 1, 2].map((i) => <div key={i} className="srow"><div /><div className="skel" style={{ height: 32 }} /><div /><div /><div /><div /></div>)}
-        {!loading && filtered.length === 0 && (
+        {!loading && sorted.length === 0 && (
           <div className="empty" style={{ margin: 18 }}>No saved companies yet. <Link to="/app/search" style={{ color: 'var(--brand)' }}>Add one →</Link></div>
         )}
-        {!loading && filtered.map((s) => {
+        {!loading && sorted.map((s) => {
           const r = reports[s.companyNumber];
           const bucket = bucketFor(s.companyNumber);
           const pillStyle = bucket === 'safe' ? { background: 'var(--ok-bg)', color: 'var(--ok)' }

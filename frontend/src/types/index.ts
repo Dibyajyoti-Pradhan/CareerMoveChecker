@@ -27,6 +27,12 @@ export interface Officer {
   resignedOn?: string;
   nationality?: string;
   occupation?: string;
+  previousCompanies?: {
+    name: string;
+    number: string;
+    status: 'active' | 'dissolved' | 'liquidation';
+    ceasedOn?: string;
+  }[];
 }
 
 export interface PscEntry {

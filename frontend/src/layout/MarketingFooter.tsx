@@ -28,6 +28,8 @@ export function MarketingFooter() {
             <Link to="/app/saved">Saved</Link>
             <Link to="/app/company/09446231">Example report</Link>
             <Link to="/methodology">Methodology</Link>
+            <Link to="/pricing">Pricing</Link>
+            <Link to="/app/bulk">Bulk check</Link>
           </div>
         </div>
         <div className="legal">
