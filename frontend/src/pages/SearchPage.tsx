@@ -115,16 +115,29 @@ export function SearchPage() {
             )}
 
             {noResults && (
-              <div className="state-card">
-                <div className="glyph"><Icon name="search" size={20} /></div>
-                <h3>No matches for "{initialQ}"</h3>
-                <p>Check the spelling, or paste the 8-character company number.</p>
-                <div className="suggestions">
+              <>
+                <div className="state-card">
+                  <div className="glyph"><Icon name="search" size={20} /></div>
+                  <h3>No companies found for '{initialQ}'</h3>
+                  <ul style={{ textAlign: 'left', margin: '12px 0', paddingLeft: 20, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.7 }}>
+                    <li>Try the 8-digit company number (e.g. <span style={{ fontFamily: 'var(--mono)' }}>09446231</span>) for an exact match.</li>
+                    <li>New companies can take up to 24 hours to appear after incorporation.</li>
+                  </ul>
+                  <a
+                    className="btn btn-secondary btn-sm"
+                    href={`https://find-and-update.company-information.service.gov.uk/company-overview?lang=en&q=${encodeURIComponent(initialQ)}`}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Search on Companies House <Icon name="external" />
+                  </a>
+                </div>
+                <div className="suggestions" style={{ marginTop: 16 }}>
                   {TRY_CHIPS.map((c) => (
                     <button key={c} className="chip" onClick={() => { setQ(c); setParams({ q: c }); }}>{c}</button>
                   ))}
                 </div>
-              </div>
+              </>
             )}
 
             {!loading && hits.length > 0 && (

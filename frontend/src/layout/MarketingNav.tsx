@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 
 export function MarketingNav() {
@@ -9,6 +9,10 @@ export function MarketingNav() {
           <span className="mk">CM</span>
           <span>CareerMove</span>
         </Link>
+        <nav className="nav-links" aria-label="Main navigation">
+          <NavLink to="/methodology">Methodology</NavLink>
+          <NavLink to="/pricing">Pricing</NavLink>
+        </nav>
         <div className="nav-cta">
           <Link className="btn btn-primary btn-sm" to="/app/search">
             Check a company
