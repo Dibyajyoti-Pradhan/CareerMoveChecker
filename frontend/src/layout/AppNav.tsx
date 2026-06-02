@@ -30,15 +30,15 @@ export function AppNav() {
           <span>CareerMove</span>
         </Link>
         <nav className="app-tabs" aria-label="App">
-          <NavLink to="/app/search" className={({ isActive }) => (isActive ? 'active' : '')} title="Search UK companies">
+          <NavLink to="/app/search" className={({ isActive }) => (isActive ? 'active' : '')} aria-label="Search UK companies" title="Search UK companies">
             <Icon name="search" />
             <span>Search</span>
           </NavLink>
-          <NavLink to="/app/compare" className={({ isActive }) => (isActive ? 'active' : '')} title="Compare up to 3 companies side by side">
+          <NavLink to="/app/compare" className={({ isActive }) => (isActive ? 'active' : '')} aria-label="Compare companies" title="Compare up to 3 companies side by side">
             <Icon name="compare" />
             <span>Compare</span>
           </NavLink>
-          <NavLink to="/app/saved" className={({ isActive }) => (isActive ? 'active' : '')} aria-label={unread > 0 ? `Saved — ${unread} unread alert${unread !== 1 ? 's' : ''}` : undefined} title="Your saved companies and change alerts">
+          <NavLink to="/app/saved" className={({ isActive }) => (isActive ? 'active' : '')} aria-label={unread > 0 ? `Saved — ${unread} unread alert${unread !== 1 ? 's' : ''}` : 'Saved companies'} title="Your saved companies and change alerts">
             <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
               <Icon name="star" />
               {unread > 0 && (
@@ -55,7 +55,7 @@ export function AppNav() {
             </span>
             <span>Saved</span>
           </NavLink>
-          <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')} title="Bulk check up to 50 companies">
+          <NavLink to="/app/bulk" className={({ isActive }) => (isActive ? 'active' : '')} aria-label="Bulk check" title="Bulk check up to 50 companies">
             <Icon name="upload" />
             <span>Bulk check</span>
           </NavLink>
