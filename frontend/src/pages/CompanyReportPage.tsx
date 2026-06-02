@@ -273,25 +273,47 @@ export function CompanyReportPage() {
         </div>
 
         {tab === 'flags' && (
-          <div className="flag-grid" style={{ marginTop: 18 }}>
-            {a.flags.map((f) => (
-              <div key={f.id} className="flag">
-                <span className={cn('m', f.severity === 'CRITICAL' && 'bad', f.severity === 'WARNING' && 'warn', (f.severity === 'POSITIVE' || f.severity === 'INFO') && 'ok')}>
-                  <Icon name={f.severity === 'CRITICAL' || f.severity === 'WARNING' ? 'warn' : 'check'} size={12} />
-                </span>
-                <div>
-                  <div className="head-row">
-                    <h4>{f.title}</h4>
-                    <span className={cn('zone-tag', f.severity === 'POSITIVE' ? 'direct' : 'deduced')}>{f.severity}</span>
+          <>
+            <div className="flag-grid" style={{ marginTop: 18 }}>
+              {a.flags.map((f) => (
+                <div key={f.id} className="flag">
+                  <span className={cn('m', f.severity === 'CRITICAL' && 'bad', f.severity === 'WARNING' && 'warn', (f.severity === 'POSITIVE' || f.severity === 'INFO') && 'ok')}>
+                    <Icon name={f.severity === 'CRITICAL' || f.severity === 'WARNING' ? 'warn' : 'check'} size={12} />
+                  </span>
+                  <div>
+                    <div className="head-row">
+                      <h4>{f.title}</h4>
+                      <span className={cn('zone-tag', f.severity === 'POSITIVE' ? 'direct' : 'deduced')}>{f.severity}</span>
+                    </div>
+                    <p>{f.explanation}</p>
+                    <div className="ev">Evidence: {f.evidence}</div>
+                    <div className="reco">{f.recommendedAction}</div>
                   </div>
-                  <p>{f.explanation}</p>
-                  <div className="ev">Evidence: {f.evidence}</div>
-                  <div className="reco">{f.recommendedAction}</div>
                 </div>
-              </div>
-            ))}
-            {a.flags.length === 0 && <div className="empty">No flags raised. Clean across all checked signals.</div>}
-          </div>
+              ))}
+              {a.flags.length === 0 && <div className="empty">No flags raised. Clean across all checked signals.</div>}
+            </div>
+            {a.recommendedActions && a.recommendedActions.length > 0 && (
+              <section aria-label="Recommended next steps" style={{ marginTop: 24 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'var(--mono)', marginBottom: 12 }}>
+                  Recommended next steps
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {a.recommendedActions.map((ra, i) => (
+                    <div key={ra.id} style={{ background: 'var(--canvas)', border: '1px solid var(--hair)', borderLeft: '3px solid var(--brand)', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--brand)', fontWeight: 600, paddingTop: 2, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{ra.title}</div>
+                          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{ra.detail}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         {tab === 'identity' && (

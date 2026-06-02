@@ -24,6 +24,7 @@ export function SavedPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reports, setReports] = useState<Record<string, CompanyReport | null>>({});
+  const [sort, setSort] = useState<'recent' | 'name' | 'score'>('recent');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
 
   // Alerts feed state
@@ -85,6 +86,16 @@ export function SavedPage() {
     if (search.trim() && !(s.companyName.toLowerCase().includes(search.toLowerCase()) || s.companyNumber.includes(search))) return false;
     if (filter === 'all') return true;
     return bucketFor(s.companyNumber) === filter;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'name') return a.companyName.localeCompare(b.companyName);
+    if (sort === 'score') {
+      const sa = reports[a.companyNumber]?.assessment.score ?? -1;
+      const sb = reports[b.companyNumber]?.assessment.score ?? -1;
+      return sa - sb;
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
   const remove = async (n: string) => {
@@ -204,7 +215,11 @@ export function SavedPage() {
         ))}
         <div className="sort">
           Sort:
-          <select><option>Recently updated</option><option>Name A-Z</option><option>Risk score</option></select>
+          <select aria-label="Sort companies by" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+            <option value="recent">Recently updated</option>
+            <option value="name">Name A-Z</option>
+            <option value="score">Risk score</option>
+          </select>
         </div>
       </div>
 
@@ -256,10 +271,10 @@ export function SavedPage() {
           <span></span>
         </div>
         {loading && [0, 1, 2].map((i) => <div key={i} className="srow"><div /><div className="skel" style={{ height: 32 }} /><div /><div /><div /><div /></div>)}
-        {!loading && filtered.length === 0 && (
+        {!loading && sorted.length === 0 && (
           <div className="empty" style={{ margin: 18 }}>No saved companies yet. <Link to="/app/search" style={{ color: 'var(--brand)' }}>Add one →</Link></div>
         )}
-        {!loading && filtered.map((s) => {
+        {!loading && sorted.map((s) => {
           const r = reports[s.companyNumber];
           const bucket = bucketFor(s.companyNumber);
           const pillStyle = bucket === 'safe' ? { background: 'var(--ok-bg)', color: 'var(--ok)' }
