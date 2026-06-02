@@ -9,6 +9,16 @@ import { useSeo } from '../lib/seo';
 
 const TRY_CHIPS = ['Monzo Bank Limited', 'Deliveroo Plc', 'Greggs Plc', '09446231'];
 
+const RECENT_KEY = 'cmc.recent';
+const MAX_RECENT = 5;
+function getRecentSearches(): { name: string; number: string }[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]'); } catch { return []; }
+}
+function addRecentSearch(name: string, number: string) {
+  const cur = getRecentSearches().filter((r) => r.number !== number);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([{ name, number }, ...cur].slice(0, MAX_RECENT)));
+}
+
 export function SearchPage() {
   useSeo({
     title: 'Search UK companies — CareerMove',
@@ -21,6 +31,7 @@ export function SearchPage() {
   const [hits, setHits] = useState<CompanySearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(Boolean(initialQ));
+  const [recent, setRecent] = useState(() => getRecentSearches());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -96,6 +107,20 @@ export function SearchPage() {
           <div>
             {!searched && (
               <div className="idle-grid">
+                {recent.length > 0 && (
+                  <div className="recent-mini" style={{ marginBottom: 16 }}>
+                    <h5>Recent searches</h5>
+                    {recent.map((r) => (
+                      <button key={r.number} className="rrow" onClick={() => navigate(`/app/company/${r.number}`)} style={{ background: 'transparent', border: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }} aria-label={`View report for ${r.name}`}>
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: 13 }}>{r.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>#{r.number}</div>
+                        </div>
+                        <Icon name="arrow-right" size={12} />
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="recent-mini">
                   <h5>Try one of these</h5>
                   {TRY_CHIPS.map((c) => (
@@ -148,7 +173,11 @@ export function SearchPage() {
                 </div>
                 <div className="result-list">
                   {hits.map((h) => (
-                    <ResultRow key={h.companyNumber} hit={h} q={initialQ} onOpen={() => navigate(`/app/company/${h.companyNumber}`)} />
+                    <ResultRow key={h.companyNumber} hit={h} q={initialQ} onOpen={() => {
+                      addRecentSearch(h.companyName, h.companyNumber);
+                      setRecent(getRecentSearches());
+                      navigate(`/app/company/${h.companyNumber}`);
+                    }} />
                   ))}
                 </div>
               </>
