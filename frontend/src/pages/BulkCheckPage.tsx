@@ -29,15 +29,6 @@ export function BulkCheckPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  useEffect(() => {
-    if (!selectAllRef.current || !result) return;
-    const eligible = filtered.filter(r => r.companyNumber);
-    const allChecked = eligible.length > 0 && eligible.every(r => selected.has(r.companyNumber!));
-    const someChecked = eligible.some(r => selected.has(r.companyNumber!));
-    selectAllRef.current.indeterminate = someChecked && !allChecked;
-    selectAllRef.current.checked = allChecked;
-  }, [selected, filtered, result]);
-
   const processFile = async (file: File) => {
     setFilename(file.name);
     setLoading(true);
@@ -75,6 +66,15 @@ export function BulkCheckPage() {
   const handleDragLeave = () => setDragOver(false);
 
   const filtered = result?.rows.filter((r) => filter === 'all' || r.bucket === filter) ?? [];
+
+  useEffect(() => {
+    if (!selectAllRef.current || !result) return;
+    const eligible = filtered.filter(r => r.companyNumber);
+    const allChecked = eligible.length > 0 && eligible.every(r => selected.has(r.companyNumber!));
+    const someChecked = eligible.some(r => selected.has(r.companyNumber!));
+    selectAllRef.current.indeterminate = someChecked && !allChecked;
+    selectAllRef.current.checked = allChecked;
+  }, [selected, filtered, result]);
 
   return (
     <div className="wrap">
