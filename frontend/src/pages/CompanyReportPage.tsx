@@ -665,6 +665,49 @@ export function CompanyReportPage() {
       >
         {feedbackState === 'done' ? (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Thanks for your feedback.</p>
+        ) : feedbackState === 'commenting' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 480 }}>
+            <label style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>
+              What could be clearer? (optional)
+            </label>
+            <textarea
+              autoFocus
+              value={feedbackComment}
+              onChange={(e) => setFeedbackComment(e.target.value)}
+              rows={3}
+              placeholder="Tell us what was confusing or missing…"
+              aria-label="Optional feedback comment"
+              style={{ fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px', resize: 'vertical', fontFamily: 'var(--sans)', lineHeight: 1.5, background: 'var(--canvas)', color: 'var(--ink)' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={async () => {
+                  try {
+                    await api.submitFeedback({
+                      companyNumber,
+                      rating: 0,
+                      useCase: 'report-page',
+                      ...(feedbackComment.trim() ? { comment: feedbackComment.trim() } : {}),
+                    });
+                    setFeedbackState('done');
+                    setToast({ text: 'Thanks for your feedback', tone: 'ok' });
+                  } catch {
+                    setFeedbackState('idle');
+                    setToast({ text: 'Could not submit feedback — try again', tone: 'bad' });
+                  }
+                }}
+              >
+                Send feedback
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setFeedbackState('done')}
+              >
+                Skip
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>Was this report useful?</span>

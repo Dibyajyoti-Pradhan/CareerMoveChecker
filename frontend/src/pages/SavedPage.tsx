@@ -17,6 +17,22 @@ function universalMeans(a: FeedAlertDto): string {
 
 const MAX_RECENT_CHANGES = 20;
 
+async function fetchReportsQueued(
+  saved: { companyNumber: string }[],
+  onUpdate: (number: string, report: unknown) => void,
+  concurrency = 3,
+) {
+  const queue = [...saved];
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift()!;
+      const report = await api.getReport(item.companyNumber).catch(() => null);
+      onUpdate(item.companyNumber, report);
+    }
+  });
+  await Promise.all(workers);
+}
+
 export function SavedPage() {
   const [items, setItems] = useState<SavedCompany[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,11 +65,9 @@ export function SavedPage() {
     api.listSaved().then(async (r) => {
       setItems(r);
       setLoading(false);
-      // Fetch reports for each saved company so we can show real verdicts
-      const pairs = await Promise.all(
-        r.map(async (s) => [s.companyNumber, await api.getReport(s.companyNumber).catch(() => null)] as const)
-      );
-      setReports(Object.fromEntries(pairs));
+      await fetchReportsQueued(r, (number, report) => {
+        setReports((cur) => ({ ...cur, [number]: report as CompanyReport | null }));
+      });
     }).catch(() => setLoading(false));
 
     loadFeed();
@@ -277,6 +291,7 @@ export function SavedPage() {
         )}
         {!loading && sorted.map((s) => {
           const r = reports[s.companyNumber];
+          const isPending = !(s.companyNumber in reports);
           const bucket = bucketFor(s.companyNumber);
           const pillStyle = bucket === 'safe' ? { background: 'var(--ok-bg)', color: 'var(--ok)' }
             : bucket === 'red' ? { background: 'var(--bad-bg)', color: 'var(--bad)' }
@@ -298,11 +313,17 @@ export function SavedPage() {
               <span className="dot" />{status}
             </span>
             <div>
-              <span className="v-pill" style={pillStyle}>{pillText}</span>
-              <span className="small">{r ? `${r.assessment.score}/100` : 'loading'}</span>
+              {isPending
+                ? <div className="skel" style={{ width: 48, height: 20, borderRadius: 999 }} />
+                : <><span className="v-pill" style={pillStyle}>{pillText}</span>
+                  <span className="small">{r ? `${r.assessment.score}/100` : '—'}</span></>
+              }
             </div>
             <span className={cn('change', bucket === 'safe' ? 'ok' : bucket === 'red' ? 'bad' : 'warn')}>
-              {r?.assessment.riskLevel ?? '—'}
+              {isPending
+                ? <div className="skel" style={{ width: 48, height: 20, borderRadius: 999 }} />
+                : (r?.assessment.riskLevel ?? '—')
+              }
             </span>
             <div className="actions">
               <Link to={`/app/company/${s.companyNumber}`} className="icon-btn" title="Open"><Icon name="external" size={14} /></Link>

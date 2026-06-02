@@ -111,9 +111,9 @@ export function PricingPage() {
           <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 24 }}>
             Frequently asked questions
           </h2>
-          <div style={{ border: '1px solid var(--hair)', borderRadius: 16, overflow: 'hidden', background: '#fff' }} role="list">
+          <div style={{ border: '1px solid var(--hair)', borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
             {FAQS.map((item, idx) => (
-              <div key={idx} role="listitem" style={{ borderBottom: idx < FAQS.length - 1 ? '1px solid var(--hair)' : 'none' }}>
+              <div key={idx} style={{ borderBottom: idx < FAQS.length - 1 ? '1px solid var(--hair)' : 'none' }}>
                 <button
                   onClick={() => toggleFaq(idx)}
                   aria-expanded={openFaq === idx}

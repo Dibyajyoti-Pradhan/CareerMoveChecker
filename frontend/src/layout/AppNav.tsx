@@ -1,22 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
+import { useSearchShortcut } from '../lib/useSearchShortcut';
 
 export function AppNav() {
-  const navigate = useNavigate();
+  useSearchShortcut();
   const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        navigate('/app/search');
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [navigate]);
 
   useEffect(() => {
     api.alertsFeed().then((r) => setUnread(r.unread)).catch(() => {});
