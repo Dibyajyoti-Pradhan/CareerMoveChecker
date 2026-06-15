@@ -38,7 +38,12 @@ export function HomePage() {
               <form className="search-row" onSubmit={submit}>
                 <div className="input-prefix">
                   <span className="pf"><Icon name="search" /></span>
-                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Company name, 8-digit number, or paste a Companies House URL" />
+                  <input
+                    aria-label="Search by company name, company number, or Companies House URL"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Company name, 8-digit number, or paste a Companies House URL"
+                  />
                 </div>
                 <button className="btn btn-primary btn-lg" type="submit">Run check</button>
               </form>
