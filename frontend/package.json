@@ -15,7 +15,8 @@
     "test:compare-brief": "node scripts/assert-compare-shortlist-brief.mjs",
     "test:saved-brief": "node scripts/assert-saved-watchlist-brief.mjs",
     "test:report-score": "node scripts/assert-report-score-breakdown.mjs",
-    "test:bulk-paste": "node scripts/assert-bulk-paste-entry.mjs"
+    "test:bulk-paste": "node scripts/assert-bulk-paste-entry.mjs",
+    "test:bulk-save": "node scripts/assert-bulk-save-watchlist.mjs"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",

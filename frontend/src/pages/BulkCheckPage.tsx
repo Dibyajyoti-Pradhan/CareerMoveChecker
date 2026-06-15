@@ -15,6 +15,7 @@ export function BulkCheckPage() {
   const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [savingSelected, setSavingSelected] = useState(false);
   const [pasteInput, setPasteInput] = useState('');
   const selectAllRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +88,24 @@ export function BulkCheckPage() {
   };
 
   const filtered = result?.rows.filter((r) => filter === 'all' || r.bucket === filter) ?? [];
+  const selectedRows = result?.rows.filter((row) => row.companyNumber && selected.has(row.companyNumber)) ?? [];
+
+  const saveSelectedToWatchlist = async () => {
+    if (selectedRows.length === 0 || savingSelected) return;
+    setSavingSelected(true);
+    try {
+      const outcomes = await Promise.allSettled(
+        selectedRows.map((row) => api.saveCompany({ companyNumber: row.companyNumber!, companyName: row.companyName ?? row.input }))
+      );
+      const savedCount = outcomes.filter((outcome) => outcome.status === 'fulfilled').length;
+      if (savedCount === 0) throw new Error('No companies saved');
+      setToast({ text: `Saved ${savedCount} selected compan${savedCount === 1 ? 'y' : 'ies'} to your watchlist`, tone: 'ok' });
+    } catch {
+      setToast({ text: 'Could not save selected companies — try again', tone: 'bad' });
+    } finally {
+      setSavingSelected(false);
+    }
+  };
 
   useEffect(() => {
     if (!selectAllRef.current || !result) return;
@@ -234,6 +253,17 @@ export function BulkCheckPage() {
             ))}
             {selected.size > 0 && (
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>{selected.size} selected</span>
+            )}
+            {selected.size > 0 && (
+              <button
+                className="btn btn-primary btn-sm"
+                type="button"
+                onClick={saveSelectedToWatchlist}
+                disabled={selectedRows.length === 0 || savingSelected}
+              >
+                {savingSelected ? <span className="spinner" /> : <Icon name="star" />}
+                {savingSelected ? 'Saving…' : 'Save selected to watchlist'}
+              </button>
             )}
             {result && result.rows.some((r) => r.bucket === 'avoid' || r.bucket === 'watch') && (
               <button
