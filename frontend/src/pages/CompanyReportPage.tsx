@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
-import type { CompanyReport } from '../types';
+import type { CompanyReport, Persona } from '../types';
 import { crestInitials, formatDate, formatSicCode, relativeTime, yearsSince } from '../lib/format';
 import { cn } from '../lib/cn';
 import { REPORT_QUESTION, REPORT_SAVE_LINE, REPORT_SAVE_CTA } from '../lib/persona-copy';
@@ -34,6 +34,7 @@ export function CompanyReportPage() {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [showAllFilings, setShowAllFilings] = useState(false);
   const [showAllReasons, setShowAllReasons] = useState(false);
+  const [decisionPersona, setDecisionPersona] = useState<Persona>('candidate');
 
   const companyName = report?.profile.companyName ?? 'Company report';
   const companyNumber = report?.profile.companyNumber ?? id;
@@ -168,6 +169,22 @@ export function CompanyReportPage() {
   const verdict = pickVerdict(a.riskLevel);
 
   const canonicalUrl = `https://careermove.uk/c/${p.companyNumber}`;
+  const decisionPack = buildDecisionPack(report, decisionPersona, canonicalUrl);
+
+  const handleCopyQuestionPack = () => {
+    const text = [
+      `${decisionPack.title} — ${p.companyName} (#${p.companyNumber})`,
+      decisionPack.stance,
+      '',
+      'Questions to ask before you proceed:',
+      ...decisionPack.questions.map((q, i) => `${i + 1}. ${q}`),
+      '',
+      `CareerMove report: ${canonicalUrl}`,
+    ].join('\n');
+    navigator.clipboard?.writeText(text)
+      .then(() => setToast({ text: 'Question pack copied', tone: 'ok' }))
+      .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(canonicalUrl)
@@ -375,6 +392,57 @@ export function CompanyReportPage() {
                 <Icon name="external" /> Share summary
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="decision-pack" aria-labelledby="decision-pack-title">
+        <div className="decision-pack-head">
+          <div>
+            <div className="s-eyebrow">Decision pack</div>
+            <h2 id="decision-pack-title">Turn the report into your next move.</h2>
+            <p>Pick your situation and CareerMove turns the public-record signals into a short action plan and questions to ask before you proceed.</p>
+          </div>
+          <div className="persona-toggle" role="tablist" aria-label="Choose decision-pack persona">
+            {([
+              ['candidate', 'Candidate'],
+              ['freelancer', 'Freelancer'],
+              ['agency', 'Recruiter'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                className={cn(decisionPersona === value && 'active')}
+                type="button"
+                role="tab"
+                aria-selected={decisionPersona === value}
+                onClick={() => setDecisionPersona(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={cn('decision-pack-body', `risk-${a.riskLevel.toLowerCase()}`)}>
+          <div className="decision-stance">
+            <span className="zone-tag deduced">{decisionPack.title}</span>
+            <h3>{decisionPack.stance}</h3>
+            <p>{decisionPack.context}</p>
+            <button className="btn btn-secondary btn-sm" type="button" onClick={handleCopyQuestionPack}>
+              <Icon name="copy" /> Copy question pack
+            </button>
+          </div>
+          <div className="decision-list">
+            <h4>Questions to ask before you proceed</h4>
+            <ol>
+              {decisionPack.questions.map((q) => <li key={q}>{q}</li>)}
+            </ol>
+          </div>
+          <div className="decision-list">
+            <h4>Watch next</h4>
+            <ul>
+              {decisionPack.watchNext.map((w) => <li key={w}>{w}</li>)}
+            </ul>
           </div>
         </div>
       </section>
@@ -783,6 +851,80 @@ function pickVerdict(level: string) {
   if (level === 'HIGH') return { headline: 'Caution — verify before proceeding.', tone: 'maybe' as const };
   if (level === 'MODERATE') return { headline: 'Caution — verify before proceeding.', tone: 'maybe' as const };
   return { headline: 'Probably yes.', tone: 'yes' as const };
+}
+
+type DecisionPack = {
+  title: string;
+  stance: string;
+  context: string;
+  questions: string[];
+  watchNext: string[];
+};
+
+function buildDecisionPack(report: CompanyReport, persona: Persona, canonicalUrl: string): DecisionPack {
+  const { profile: p, assessment: a } = report;
+  const company = p.companyName;
+  const overdueSignals = [
+    p.accountsOverdue && 'overdue accounts',
+    p.confirmationStatementOverdue && 'an overdue confirmation statement',
+  ].filter(Boolean);
+  const severeFlags = a.flags.filter((f) => f.severity === 'CRITICAL' || f.severity === 'WARNING');
+  const hasInsolvency = report.insolvency.length > 0;
+  const hasOutstandingCharges = report.charges.some((c) => c.status === 'outstanding');
+
+  const stanceByRisk: Record<string, string> = {
+    LOW: `${company} looks reasonable on public records, but still verify the human details before you commit.`,
+    MODERATE: `${company} has some signals worth checking before you rely on them.`,
+    HIGH: `Pause before proceeding with ${company}; ask for clear evidence and protect yourself contractually.`,
+    CRITICAL: `Do not proceed with ${company} until the red flags are explained and independently verified.`,
+  };
+
+  const contextByPersona: Record<Persona, string> = {
+    candidate: 'Use this before accepting an offer, resigning from your current role, or sharing sensitive employment details.',
+    freelancer: 'Use this before starting unpaid discovery, extending payment terms, or delivering work before a deposit clears.',
+    agency: 'Use this before placing a candidate, giving credit terms, or introducing a client to your shortlist.',
+  };
+
+  const baseQuestions: Record<Persona, string[]> = {
+    candidate: [
+      'Can you explain the company runway, funding, and hiring plan for the next 12 months?',
+      'Who will be my legal employer, and is this the same entity shown on Companies House?',
+      'Are there any recent filing, ownership, or director changes I should know about?',
+    ],
+    freelancer: [
+      'Can you confirm the contracting entity, billing contact, and payment approval process in writing?',
+      'Can we agree a deposit, milestone billing, or shorter payment terms before work starts?',
+      'Are there any outstanding filings, charges, or restructuring events that may affect payment risk?',
+    ],
+    agency: [
+      'Can you confirm the hiring entity, fee payer, and authority to sign the terms?',
+      'Should we require payment safeguards, shorter credit terms, or director approval before placement?',
+      'Are there leadership, filing, or insolvency signals that should be disclosed to the candidate?',
+    ],
+  };
+
+  const signalQuestions = [
+    overdueSignals.length > 0 && `What caused ${overdueSignals.join(' and ')}, and when will it be resolved?`,
+    hasInsolvency && 'What is the current insolvency position, and can you share formal documentation?',
+    hasOutstandingCharges && 'What security or lender obligations are attached to the outstanding charges?',
+    severeFlags[0] && `Can you explain this public-record signal: ${severeFlags[0].title}?`,
+  ].filter(Boolean) as string[];
+
+  const questions = [...signalQuestions, ...baseQuestions[persona]].slice(0, 5);
+  const watchNext = [
+    p.nextAccountsDue && `Next accounts due ${formatDate(p.nextAccountsDue)}`,
+    p.confirmationStatementOverdue ? 'Confirmation statement is overdue now' : 'Confirmation statement status changes',
+    severeFlags[0] ? `Resolution of: ${severeFlags[0].title}` : 'New filings, officer changes, charges, or insolvency events',
+    `Save this report and re-check before committing: ${canonicalUrl}`,
+  ].filter(Boolean) as string[];
+
+  return {
+    title: persona === 'candidate' ? 'Candidate decision pack' : persona === 'freelancer' ? 'Freelancer decision pack' : 'Recruiter decision pack',
+    stance: stanceByRisk[a.riskLevel] ?? stanceByRisk.MODERATE,
+    context: contextByPersona[persona],
+    questions,
+    watchNext,
+  };
 }
 
 function AddressMap({ postcode, address }: { postcode: string; address: string }) {
