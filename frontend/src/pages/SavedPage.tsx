@@ -10,6 +10,15 @@ const FILTERS = ['all', 'safe', 'watch', 'red'] as const;
 
 type Bucket = 'safe' | 'watch' | 'red' | 'unknown';
 
+type WatchlistBrief = {
+  headline: string;
+  summary: string;
+  topPriority: CompanyReport;
+  counts: { clear: number; watch: number; red: number };
+  actions: string[];
+  compareNumbers: string[];
+};
+
 // Pick the first non-empty persona string from the backend's map.
 function universalMeans(a: FeedAlertDto): string {
   return a.meansByPersona.candidate || a.meansByPersona.freelancer || a.meansByPersona.agency || '';
@@ -113,6 +122,8 @@ export function SavedPage() {
     }
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
+
+  const watchlistBrief = useMemo(() => buildWatchlistBrief(items, reports), [items, reports]);
 
   const remove = async (n: string) => {
     await api.removeSaved(n).catch(() => {});
@@ -222,6 +233,56 @@ export function SavedPage() {
           </div>
         )}
       </section>
+
+      {watchlistBrief && (
+        <section className="watchlist-brief" aria-label="Watchlist briefing">
+          <div className="brief-panel intro">
+            <div className="s-eyebrow">Watchlist briefing</div>
+            <h2>Your saved companies, turned into the next check to run.</h2>
+            <p>{watchlistBrief.summary}</p>
+            <div className="brief-counts" aria-label="Saved company risk mix">
+              <span><b>{watchlistBrief.counts.clear}</b> clear</span>
+              <span><b>{watchlistBrief.counts.watch}</b> watch</span>
+              <span><b>{watchlistBrief.counts.red}</b> red flag</span>
+            </div>
+          </div>
+          <div className="brief-panel priority">
+            <span className="summary-label">Top priority</span>
+            <h3>{watchlistBrief.headline}</h3>
+            <p>
+              {watchlistBrief.topPriority.assessment.riskLevel} · {watchlistBrief.topPriority.assessment.score}/100 ·{' '}
+              {watchlistBrief.topPriority.assessment.flags.find((f) => f.severity === 'CRITICAL' || f.severity === 'WARNING')?.title ?? 'No blocking flag found'}
+            </p>
+            <Link className="btn btn-secondary btn-sm" to={`/app/company/${watchlistBrief.topPriority.profile.companyNumber}`}>
+              Open priority report <Icon name="arrow-right" />
+            </Link>
+          </div>
+          <div className="brief-panel action">
+            <span className="summary-label">Best next action</span>
+            <ol>
+              {watchlistBrief.actions.map((action) => <li key={action}>{action}</li>)}
+            </ol>
+            <div className="brief-action">
+              {watchlistBrief.compareNumbers.length > 1 && (
+                <Link className="btn btn-primary btn-sm" to={`/app/compare?numbers=${watchlistBrief.compareNumbers.join(',')}`}>
+                  Compare priority set
+                </Link>
+              )}
+              <button
+                className="btn btn-secondary btn-sm"
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(watchlistBriefToText(watchlistBrief))
+                    .then(() => setToast({ text: 'Watchlist brief copied', tone: 'ok' }))
+                    .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+                }}
+              >
+                <Icon name="copy" /> Copy watchlist brief
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Saved companies list */}
       <div className="stats">
@@ -388,4 +449,69 @@ export function SavedPage() {
       </div>
     </div>
   );
+}
+
+function buildWatchlistBrief(items: SavedCompany[], reports: Record<string, CompanyReport | null>): WatchlistBrief | null {
+  const loaded = items
+    .map((item) => reports[item.companyNumber])
+    .filter((report): report is CompanyReport => Boolean(report));
+
+  if (loaded.length === 0) return null;
+
+  const counts = loaded.reduce((acc, report) => {
+    if (report.assessment.riskLevel === 'LOW') acc.clear += 1;
+    else if (report.assessment.riskLevel === 'CRITICAL') acc.red += 1;
+    else acc.watch += 1;
+    return acc;
+  }, { clear: 0, watch: 0, red: 0 });
+
+  const ranked = [...loaded].sort((a, b) => {
+    const riskDiff = riskPriority(b.assessment.riskLevel) - riskPriority(a.assessment.riskLevel);
+    if (riskDiff !== 0) return riskDiff;
+    return a.assessment.score - b.assessment.score;
+  });
+
+  const topPriority = ranked[0];
+  const blockingFlag = topPriority.assessment.flags.find((flag) => flag.severity === 'CRITICAL' || flag.severity === 'WARNING');
+  const compareNumbers = ranked.slice(0, 3).map((report) => report.profile.companyNumber);
+
+  const actions = [
+    blockingFlag
+      ? `Open ${topPriority.profile.companyName} and clear “${blockingFlag.title}” before the next commitment.`
+      : `Open ${topPriority.profile.companyName} and confirm the public record still matches what you have been told.`,
+    compareNumbers.length > 1
+      ? `Compare the ${compareNumbers.length} highest-priority saved companies side-by-side before choosing.`
+      : 'Save another company so you can compare alternatives side-by-side before choosing.',
+    'Refresh the watchlist before signing, invoicing, or placing a candidate so stale filings do not drive the decision.',
+  ];
+
+  return {
+    headline: `${topPriority.profile.companyName} needs the next manual check.`,
+    summary: `${loaded.length} saved compan${loaded.length === 1 ? 'y is' : 'ies are'} loaded. ${counts.red} red-flag and ${counts.watch} watch item${counts.watch === 1 ? '' : 's'} should be cleared before anyone commits.`,
+    topPriority,
+    counts,
+    actions,
+    compareNumbers,
+  };
+}
+
+function riskPriority(level: RiskLevel): number {
+  if (level === 'CRITICAL') return 3;
+  if (level === 'HIGH') return 2;
+  if (level === 'MODERATE') return 1;
+  return 0;
+}
+
+function watchlistBriefToText(brief: WatchlistBrief): string {
+  return [
+    'CareerMove watchlist brief',
+    '',
+    `Top priority: ${brief.headline}`,
+    `Risk: ${brief.topPriority.assessment.riskLevel} · ${brief.topPriority.assessment.score}/100`,
+    '',
+    'Best next action:',
+    ...brief.actions.map((action, i) => `${i + 1}. ${action}`),
+    '',
+    `Risk mix: ${brief.counts.clear} clear · ${brief.counts.watch} watch · ${brief.counts.red} red flag`,
+  ].join('\n');
 }

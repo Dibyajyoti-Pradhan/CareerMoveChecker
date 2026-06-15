@@ -12,7 +12,8 @@
     "test:report-pack": "node scripts/assert-report-decision-pack.mjs",
     "test:search-shortlist": "node scripts/assert-search-shortlist.mjs",
     "test:compare-summary": "node scripts/assert-compare-decision-summary.mjs",
-    "test:compare-brief": "node scripts/assert-compare-shortlist-brief.mjs"
+    "test:compare-brief": "node scripts/assert-compare-shortlist-brief.mjs",
+    "test:saved-brief": "node scripts/assert-saved-watchlist-brief.mjs"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
