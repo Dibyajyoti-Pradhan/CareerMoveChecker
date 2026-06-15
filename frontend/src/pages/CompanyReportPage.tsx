@@ -170,6 +170,7 @@ export function CompanyReportPage() {
 
   const canonicalUrl = `https://careermove.uk/c/${p.companyNumber}`;
   const decisionPack = buildDecisionPack(report, decisionPersona, canonicalUrl);
+  const scoreDrivers = buildScoreDrivers(report);
 
   const handleCopyQuestionPack = () => {
     const text = [
@@ -336,6 +337,31 @@ export function CompanyReportPage() {
                 </p>
               </div>
             )}
+
+            <section className="score-breakdown" aria-labelledby="score-breakdown-title">
+              <div className="score-breakdown-head">
+                <div>
+                  <div className="s-eyebrow">Plain-English score read</div>
+                  <h4 id="score-breakdown-title">Why {a.score}/100 means “{verdict.headline}”</h4>
+                </div>
+                <span className={cn('risk-band', scoreDrivers.bandTone)}>{scoreDrivers.band}</span>
+              </div>
+              <p>{scoreDrivers.summary}</p>
+              <div className="score-breakdown-grid">
+                <div className="score-driver down">
+                  <h5>What pushed the score down</h5>
+                  <ul>
+                    {scoreDrivers.downsides.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+                <div className="score-driver up">
+                  <h5>What helped the score</h5>
+                  <ul>
+                    {scoreDrivers.upsides.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </section>
 
             <div className="ticks" id="top-reasons-list">
               {(showAllReasons ? a.topReasons : a.topReasons.slice(0, 4)).map((r, i) => {
@@ -851,6 +877,43 @@ function pickVerdict(level: string) {
   if (level === 'HIGH') return { headline: 'Caution — verify before proceeding.', tone: 'maybe' as const };
   if (level === 'MODERATE') return { headline: 'Caution — verify before proceeding.', tone: 'maybe' as const };
   return { headline: 'Probably yes.', tone: 'yes' as const };
+}
+
+function buildScoreDrivers(report: CompanyReport) {
+  const { assessment: a, profile: p } = report;
+  const downsideFlags = a.flags
+    .filter((flag) => flag.severity === 'CRITICAL' || flag.severity === 'WARNING' || flag.severity === 'INFO')
+    .map((flag) => `${flag.title}: ${flag.recommendedAction}`)
+    .slice(0, 3);
+  const upsideFlags = a.flags
+    .filter((flag) => flag.severity === 'POSITIVE')
+    .map((flag) => `${flag.title}: ${flag.evidence}`)
+    .slice(0, 3);
+
+  const downsides = downsideFlags.length > 0
+    ? downsideFlags
+    : ['No major negative public-record signals were found in this check.'];
+  const upsides = upsideFlags.length > 0
+    ? upsideFlags
+    : [
+        p.companyStatus === 'active'
+          ? 'Company status is active at Companies House.'
+          : 'Positive signals are limited; verify the company context manually.',
+      ];
+
+  const band = a.riskLevel === 'LOW'
+    ? 'Low public-record risk'
+    : a.riskLevel === 'MODERATE'
+      ? 'Moderate public-record risk'
+      : a.riskLevel === 'HIGH'
+        ? 'High public-record risk'
+        : 'Critical public-record risk';
+  const bandTone = a.riskLevel === 'LOW' ? 'ok' : a.riskLevel === 'CRITICAL' ? 'bad' : 'warn';
+  const summary = a.riskLevel === 'LOW'
+    ? 'The score is helped by current public-record basics, but CareerMove still separates that from guarantees about culture, solvency, or future performance.'
+    : 'The score is not a simple pass or fail: positive records can sit alongside caution signals. Use the downside list as the first questions to ask.';
+
+  return { band, bandTone, summary, downsides, upsides };
 }
 
 type DecisionPack = {
