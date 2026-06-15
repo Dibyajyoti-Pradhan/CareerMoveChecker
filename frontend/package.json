@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test:a11y": "node scripts/assert-homepage-a11y.mjs",
-    "test:report-pack": "node scripts/assert-report-decision-pack.mjs"
+    "test:report-pack": "node scripts/assert-report-decision-pack.mjs",
+    "test:search-shortlist": "node scripts/assert-search-shortlist.mjs"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",

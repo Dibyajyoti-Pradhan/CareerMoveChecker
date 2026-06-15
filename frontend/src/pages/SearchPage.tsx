@@ -40,6 +40,7 @@ export function SearchPage() {
   const [error, setError] = useState(false);
   const [searched, setSearched] = useState(Boolean(initialQ));
   const [recent, setRecent] = useState(() => getRecentSearches());
+  const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(() => new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -88,6 +89,17 @@ export function SearchPage() {
   };
 
   const noResults = searched && !loading && !error && hits.length === 0 && initialQ;
+  const selectedHits = hits.filter((h) => selectedCompanies.has(h.companyNumber));
+
+  const toggleSelectedCompany = (companyNumber: string) => {
+    setSelectedCompanies((cur) => {
+      const next = new Set(cur);
+      next.has(companyNumber) ? next.delete(companyNumber) : next.add(companyNumber);
+      return next;
+    });
+  };
+
+  const clearShortlist = () => setSelectedCompanies(new Set());
 
   return (
     <>
@@ -211,13 +223,21 @@ export function SearchPage() {
                   <h3>{SEARCH_RAIL_Q}</h3>
                   <span className="pill">{hits.length} results</span>
                 </div>
+                <CompareShortlist selectedHits={selectedHits} onClear={clearShortlist} />
                 <div className="result-list">
                   {hits.map((h) => (
-                    <ResultRow key={h.companyNumber} hit={h} q={initialQ} onOpen={() => {
-                      addRecentSearch(h.companyName, h.companyNumber);
-                      setRecent(getRecentSearches());
-                      navigate(`/app/company/${h.companyNumber}`);
-                    }} />
+                    <ResultRow
+                      key={h.companyNumber}
+                      hit={h}
+                      q={initialQ}
+                      selected={selectedCompanies.has(h.companyNumber)}
+                      onToggleShortlist={() => toggleSelectedCompany(h.companyNumber)}
+                      onOpen={() => {
+                        addRecentSearch(h.companyName, h.companyNumber);
+                        setRecent(getRecentSearches());
+                        navigate(`/app/company/${h.companyNumber}`);
+                      }}
+                    />
                   ))}
                 </div>
               </>
@@ -244,7 +264,37 @@ export function SearchPage() {
   );
 }
 
-function ResultRow({ hit, q, onOpen }: { hit: CompanySearchHit; q: string; onOpen: () => void }) {
+function CompareShortlist({ selectedHits, onClear }: { selectedHits: CompanySearchHit[]; onClear: () => void }) {
+  const compareUrl = `/app/compare?numbers=${selectedHits.map((h) => h.companyNumber).join(',')}`;
+
+  return (
+    <div className="compare-shortlist" aria-live="polite">
+      <div>
+        <h3>Compare shortlist</h3>
+        <p>
+          {selectedHits.length === 0
+            ? 'Select companies from the results to compare them side by side before you commit.'
+            : `${selectedHits.length} selected: ${selectedHits.map((h) => h.companyName).join(', ')}`}
+        </p>
+      </div>
+      <div className="compare-shortlist-actions">
+        {selectedHits.length > 0 && (
+          <button className="btn btn-ghost btn-sm" type="button" onClick={onClear}>Clear shortlist</button>
+        )}
+        <Link
+          className="btn btn-primary btn-sm"
+          to={compareUrl}
+          aria-disabled={selectedHits.length < 2}
+          onClick={(e) => { if (selectedHits.length < 2) e.preventDefault(); }}
+        >
+          <Icon name="compare" /> Compare {selectedHits.length >= 2 ? selectedHits.length : ''}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ResultRow({ hit, q, selected, onToggleShortlist, onOpen }: { hit: CompanySearchHit; q: string; selected: boolean; onToggleShortlist: () => void; onOpen: () => void }) {
   const statusTone = statusBadgeTone(hit.companyStatus);
   return (
     <div
@@ -256,6 +306,16 @@ function ResultRow({ hit, q, onOpen }: { hit: CompanySearchHit; q: string; onOpe
       aria-label={`View trust report for ${hit.companyName}, company number ${hit.companyNumber}, status ${hit.companyStatus}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
     >
+      <button
+        className="compare-pick"
+        type="button"
+        aria-pressed={selected}
+        aria-label={`${selected ? 'Remove from' : 'Add to'} compare shortlist: ${hit.companyName}`}
+        title={selected ? 'Remove from compare shortlist' : 'Add to compare shortlist'}
+        onClick={(e) => { e.stopPropagation(); onToggleShortlist(); }}
+      >
+        <Icon name={selected ? 'check' : 'plus'} size={13} />
+      </button>
       <div className="crest">{crestInitials(hit.companyName)}</div>
       <div className="body">
         <h4>{highlightMark(hit.companyName, q)}</h4>
