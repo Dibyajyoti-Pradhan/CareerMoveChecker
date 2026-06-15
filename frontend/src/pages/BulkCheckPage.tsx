@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { api } from '../api/client';
 import type { BulkResult } from '../types';
 import { cn } from '../lib/cn';
-import { formatDate } from '../lib/format';
+import { extractCompanyNumber } from '../lib/format';
 import { ScoreGauge } from '../components/ScoreGauge';
 
 export function BulkCheckPage() {
@@ -15,8 +15,11 @@ export function BulkCheckPage() {
   const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pasteInput, setPasteInput] = useState('');
   const selectAllRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const parsedPasteNumbers = parseBulkInput(pasteInput);
 
   const toggleRow = (n: string) => setSelected((cur) => {
     const next = new Set(cur);
@@ -34,7 +37,7 @@ export function BulkCheckPage() {
     setFilename(file.name);
     setLoading(true);
     const text = await file.text();
-    const numbers = text.split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const numbers = parseBulkInput(text);
     try {
       const r = await api.bulkCheck(numbers);
       setResult(r);
@@ -65,6 +68,23 @@ export function BulkCheckPage() {
   };
 
   const handleDragLeave = () => setDragOver(false);
+
+  const processManualList = async () => {
+    if (parsedPasteNumbers.length === 0) return;
+    setFilename('Pasted list');
+    setLoading(true);
+    setSelected(new Set());
+    try {
+      const r = await api.bulkCheck(parsedPasteNumbers);
+      setResult(r);
+      setToast({ text: `Checked ${parsedPasteNumbers.length} pasted entries`, tone: 'ok' });
+    } catch {
+      setResult(null);
+      setToast({ text: 'Bulk check failed — try again', tone: 'bad' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = result?.rows.filter((r) => filter === 'all' || r.bucket === filter) ?? [];
 
@@ -143,6 +163,58 @@ export function BulkCheckPage() {
             </label>
           </div>
         </div>
+      )}
+
+      {!filename && (
+        <section className="manual-list" aria-labelledby="manual-list-title" style={{ marginTop: 24 }}>
+          <div className="rail-card" style={{ padding: 20 }}>
+            <div className="page-head" style={{ marginBottom: 12 }}>
+              <div>
+                <div className="s-eyebrow">No CSV needed</div>
+                <h2 id="manual-list-title" style={{ fontSize: '1.25rem', margin: '4px 0' }}>Paste company numbers or names</h2>
+                <p className="small muted" style={{ margin: 0 }}>
+                  Copy a shortlist from a spreadsheet, email, or Companies House links. We'll clean it up before matching.
+                </p>
+              </div>
+              <span className="pill">Extracted {parsedPasteNumbers.length}</span>
+            </div>
+            <label htmlFor="bulk-paste-input" className="small muted" style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+              Paste one per line, comma separated, or paste Companies House URLs
+            </label>
+            <textarea
+              id="bulk-paste-input"
+              value={pasteInput}
+              onChange={(e) => setPasteInput(e.target.value)}
+              rows={6}
+              placeholder={'09446231\n03977902\nhttps://find-and-update.company-information.service.gov.uk/company/SC095000'}
+              style={{
+                width: '100%',
+                border: '1px solid var(--line)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                resize: 'vertical',
+                fontFamily: 'var(--mono)',
+                fontSize: 13,
+                lineHeight: 1.6,
+                background: 'var(--canvas)',
+                color: 'var(--ink)',
+              }}
+            />
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+              <p className="small muted" style={{ margin: 0 }}>
+                Headers such as “company_number” are ignored; blank rows are skipped.
+              </p>
+              <button
+                className="btn btn-primary btn-sm"
+                type="button"
+                onClick={processManualList}
+                disabled={parsedPasteNumbers.length === 0 || loading}
+              >
+                <Icon name="search" /> Run pasted list
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {result && (
@@ -308,3 +380,16 @@ export function BulkCheckPage() {
     </div>
   );
 }
+
+const MAX_BULK_ROWS = 50;
+const HEADER_CELLS = new Set(['company_number', 'company number', 'companynumber', 'number', 'name', 'company_name', 'company name']);
+
+const parseBulkInput = (text: string) => {
+  return text
+    .split(/[\r\n,;\t]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => extractCompanyNumber(s) ?? s)
+    .filter((s) => !HEADER_CELLS.has(s.toLowerCase()))
+    .slice(0, MAX_BULK_ROWS);
+};
