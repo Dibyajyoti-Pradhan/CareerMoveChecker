@@ -17,4 +17,16 @@ if (!/aria-label="Search by company name, company number, or Companies House URL
   throw new Error('Homepage hero search input must have an explicit accessible aria-label, not only placeholder text.');
 }
 
-console.log('Homepage accessibility assertions passed.');
+const requiredDecisionCopy = [
+  'Before you sign an offer',
+  'Before you invoice a new client',
+  'Before you place a candidate',
+];
+
+for (const copy of requiredDecisionCopy) {
+  if (!homePage.includes(copy)) {
+    throw new Error(`Homepage must explain the decision moment: ${copy}`);
+  }
+}
+
+console.log('Homepage accessibility and conversion-copy assertions passed.');

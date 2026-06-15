@@ -13,7 +13,8 @@ section.s.tight { padding: 64px 0 96px; }
 /* ==================== HERO ==================== */
 .hero { padding: 64px 0 24px; position: relative; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; align-items: start; }
-.hero-right .answer-card { margin-top: 0; }
+.hero-left, .hero-right { min-width: 0; }
+.hero-right .answer-card { margin-top: 0; max-width: 100%; }
 @media (max-width: 1080px) {
   .hero-grid { grid-template-columns: 1fr; gap: 40px; }
   .hero-right .answer-card { margin-top: 8px; }
@@ -43,6 +44,15 @@ section.s.tight { padding: 64px 0 96px; }
 
 .suggested { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
 .suggested .lbl { font-family: var(--mono); font-size: 11px; color: var(--muted-2); text-transform: uppercase; letter-spacing: .05em; }
+
+.decision-moments { padding: 18px 0 24px; }
+.decision-card { background: #fff; border: 1px solid var(--hair); border-radius: 20px; padding: 28px; box-shadow: var(--shadow-sm); display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); gap: 24px; align-items: start; overflow: hidden; }
+.decision-card h2 { margin: 10px 0 0; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.08; letter-spacing: -.03em; font-weight: 600; max-width: 16ch; text-wrap: balance; }
+.decision-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+.decision-item { background: var(--canvas); border: 1px solid var(--hair); border-radius: 14px; padding: 18px; min-height: 172px; min-width: 0; }
+.decision-item .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--brand-50); color: var(--brand); display: grid; place-items: center; margin-bottom: 14px; }
+.decision-item h3 { margin: 0 0 8px; font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+.decision-item p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 /* ==================== ANSWER CARD (Homepage preview + Report Zone B) ==================== */
 .answer-card { margin-top: 56px; border: 1px solid var(--hair); border-radius: 22px; background: #fff;
@@ -672,7 +682,8 @@ section.s.tight { padding: 64px 0 96px; }
 @media (max-width: 1000px) {
   .s-head, .persona-grid, .zones, .steps, .pricing, .moments, .perks, .perks-big,
   .conf-grid, .not-this, .zones-mini, .stats, .kpis, .two-col, .idle-grid,
-  .id-meta, .flag-grid, .compare-grid, .search-grid, .account-shell { grid-template-columns: 1fr !important; }
+  .id-meta, .flag-grid, .compare-grid, .search-grid, .account-shell,
+  .decision-card, .decision-grid { grid-template-columns: 1fr !important; }
   .step { border-right: 0; border-bottom: 1px dashed var(--hair); padding: 0 0 28px !important; }
   .step:not(:first-child) { padding: 28px 0 0 !important; }
   section.s { padding: 64px 0; }

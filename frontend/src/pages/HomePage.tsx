@@ -73,8 +73,52 @@ export function HomePage() {
         </div>
       </section>
 
+      <DecisionMoments />
+
       <Zones />
     </>
+  );
+}
+
+function DecisionMoments() {
+  const moments = [
+    {
+      icon: 'user' as const,
+      title: 'Before you sign an offer',
+      text: 'Check whether the employer looks stable, current with filings, and free from obvious public-record red flags.',
+    },
+    {
+      icon: 'building' as const,
+      title: 'Before you invoice a new client',
+      text: 'Spot late filings, status changes, or insolvency signals before you commit time to work you may not get paid for.',
+    },
+    {
+      icon: 'users' as const,
+      title: 'Before you place a candidate',
+      text: 'Give recruiters a fast sanity check before introducing someone to a company with weak or unclear public signals.',
+    },
+  ];
+
+  return (
+    <section className="decision-moments" aria-labelledby="decision-moments-title">
+      <div className="wrap">
+        <div className="decision-card">
+          <div>
+            <div className="s-eyebrow">Use it at the decision point</div>
+            <h2 id="decision-moments-title">Three moments where a 60-second check saves awkward risk.</h2>
+          </div>
+          <div className="decision-grid">
+            {moments.map((moment) => (
+              <div className="decision-item" key={moment.title}>
+                <span className="ic"><Icon name={moment.icon} size={18} /></span>
+                <h3>{moment.title}</h3>
+                <p>{moment.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
