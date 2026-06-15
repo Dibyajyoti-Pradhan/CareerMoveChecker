@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
 import type { CompanyReport, CompanySearchHit } from '../types';
@@ -63,6 +63,10 @@ export function ComparePage() {
   };
 
   const remove = (n: string) => setNumbers(numbers.filter((x) => x !== n));
+  const bestIdx = findBest(reports);
+  const watchIdx = selectWatchIndex(reports, bestIdx);
+  const best = bestIdx >= 0 ? reports[bestIdx] : undefined;
+  const watched = watchIdx >= 0 ? reports[watchIdx] : undefined;
 
   return (
     <div className="wrap">
@@ -149,6 +153,32 @@ export function ComparePage() {
         <h3>{HERO_QUESTION}</h3>
         <span className="count">{numbers.length} of {MAX} slots used</span>
       </div>
+
+      {!loading && reports.length >= 2 && best && watched && (
+        <section className="compare-summary" aria-label="Decision summary">
+          <div className="summary-main">
+            <div className="s-eyebrow">Compare takeaway</div>
+            <h2>Decision summary</h2>
+            <p>{compareTakeaway(best, watched)}</p>
+          </div>
+          <div className="summary-card best">
+            <span className="summary-label">Best current pick</span>
+            <strong>{best.profile.companyName}</strong>
+            <p>Highest score: {best.assessment.score} / 100 · {riskHeadline(best)}</p>
+            <Link className="btn btn-secondary btn-sm" to={`/app/company/${best.profile.companyNumber}`}>
+              Open report <Icon name="arrow-right" />
+            </Link>
+          </div>
+          <div className="summary-card watch">
+            <span className="summary-label">Watch before you commit</span>
+            <strong>{watched.profile.companyName}</strong>
+            <p>{watchReason(watched)}</p>
+            <Link className="btn btn-secondary btn-sm" to={`/app/company/${watched.profile.companyNumber}`}>
+              Review risk <Icon name="arrow-right" />
+            </Link>
+          </div>
+        </section>
+      )}
 
       {loading && <div className="empty" style={{ margin: 18 }}>Loading…</div>}
 
@@ -309,6 +339,34 @@ function findWorst(reports: CompanyReport[]): number {
   let worst = 0;
   reports.forEach((r, i) => { if (r.assessment.score < reports[worst].assessment.score) worst = i; });
   return worst;
+}
+
+function selectWatchIndex(reports: CompanyReport[], bestIdx: number): number {
+  const worstIdx = findWorst(reports);
+  if (worstIdx < 0) return -1;
+  if (worstIdx !== bestIdx) return worstIdx;
+  return reports.length > 1 ? 1 : worstIdx;
+}
+
+function compareTakeaway(best: CompanyReport, watched: CompanyReport): string {
+  const spread = best.assessment.score - watched.assessment.score;
+  const spreadText = spread > 0 ? `${spread} points ahead` : 'level on score';
+  return `${best.profile.companyName} is the strongest current option (${spreadText}). Before committing, review ${watched.profile.companyName} for the clearest caution signal in the shortlist.`;
+}
+
+function riskHeadline(report: CompanyReport): string {
+  if (report.assessment.riskLevel === 'LOW') return 'low public-record risk';
+  if (report.assessment.riskLevel === 'MODERATE') return 'moderate public-record risk';
+  if (report.assessment.riskLevel === 'HIGH') return 'high public-record risk';
+  return 'critical public-record risk';
+}
+
+function watchReason(report: CompanyReport): string {
+  const flag = report.assessment.flags.find((f) => f.severity === 'CRITICAL' || f.severity === 'WARNING');
+  if (flag) return flag.recommendedAction || flag.explanation || flag.title;
+  const action = report.assessment.recommendedActions[0];
+  if (action) return action.detail || action.title;
+  return `${riskHeadline(report)} · open the report before you sign, invoice, or place.`;
 }
 
 function truncateAtWord(text: string, max: number): string {
