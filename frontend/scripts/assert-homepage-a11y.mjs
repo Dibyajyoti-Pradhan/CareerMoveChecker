@@ -29,4 +29,29 @@ for (const copy of requiredDecisionCopy) {
   }
 }
 
-console.log('Homepage accessibility and conversion-copy assertions passed.');
+const requiredExampleReportSignals = [
+  'Caution — verify before proceeding.',
+  'Some caution warranted. Public data shows mixed or limited signals.',
+  'High officer churn in last 24 months',
+  'Outstanding charges (2)',
+];
+
+for (const copy of requiredExampleReportSignals) {
+  if (!homePage.includes(copy)) {
+    throw new Error(`Homepage example report must match the live Monzo report signal: ${copy}`);
+  }
+}
+
+const misleadingExampleClaims = [
+  'Probably yes.',
+  'no insolvency on file',
+  'Stable leadership — board steady',
+];
+
+for (const copy of misleadingExampleClaims) {
+  if (homePage.includes(copy)) {
+    throw new Error(`Homepage example report must not make stale/misleading claim: ${copy}`);
+  }
+}
+
+console.log('Homepage accessibility, conversion-copy, and example-report honesty assertions passed.');

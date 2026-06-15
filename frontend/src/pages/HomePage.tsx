@@ -147,13 +147,13 @@ function AnswerCardPreview() {
 
         <div>
           <div className="answer-q">Will this company still be here next year?</div>
-          <h3 className="answer-h"><em>Probably yes.</em></h3>
-          <p className="answer-verdict">Strong public signals. 11 years of continuous trading, no insolvency on file, accounts and confirmation statement filed on time, and stable leadership.</p>
+          <h3 className="answer-h"><em>Caution — verify before proceeding.</em></h3>
+          <p className="answer-verdict">Some caution warranted. Public data shows mixed or limited signals. Additional checks recommended before significant commitment.</p>
           <Ticks items={[
             { ok: true, text: 'Active for 11 years — no gaps in status', ev: 'Direct · Companies House status & incorporation date' },
-            { ok: true, text: 'No insolvency or strike-off on the record', ev: 'Direct · Insolvency register clean' },
-            { ok: true, text: 'Accounts and confirmation statement filed on time', ev: 'Direct · Last filed 14 Mar 2026' },
-            { ok: true, text: 'Stable leadership — board steady', ev: 'Direct · No officer churn in last 12 months' },
+            { ok: false, text: 'High officer churn in last 24 months', ev: 'Deduced · Ask about leadership stability' },
+            { ok: false, text: 'Outstanding charges (2)', ev: 'Deduced · Review obligations in context' },
+            { ok: true, text: 'Accounts and confirmation statement filed on time', ev: 'Direct · No overdue flags' },
           ]} />
         </div>
 
