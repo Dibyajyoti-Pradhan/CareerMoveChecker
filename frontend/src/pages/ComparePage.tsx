@@ -17,6 +17,7 @@ export function ComparePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [input, setInput] = useState('');
+  const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
 
   useEffect(() => {
     if (numbers.length === 0) { setReports([]); return; }
@@ -25,6 +26,12 @@ export function ComparePage() {
     api.compare(numbers).then((r) => { setReports(r); setLoading(false); }).catch(() => { setError(true); setLoading(false); });
     setParams(numbers.length ? { numbers: numbers.join(',') } : {});
   }, [numbers.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   const [suggestions, setSuggestions] = useState<CompanySearchHit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -67,9 +74,26 @@ export function ComparePage() {
   const watchIdx = selectWatchIndex(reports, bestIdx);
   const best = bestIdx >= 0 ? reports[bestIdx] : undefined;
   const watched = watchIdx >= 0 ? reports[watchIdx] : undefined;
+  const shortlistBrief = reports.length >= 2 && best && watched
+    ? buildShortlistBrief(reports, best, watched)
+    : null;
 
   return (
     <div className="wrap">
+      {toast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 90,
+            background: toast.tone === 'ok' ? 'var(--ok-bg)' : 'var(--bad-bg)',
+            color: toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)',
+            border: `1px solid ${toast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)'}`,
+            padding: '10px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          {toast.text}
+        </div>
+      )}
       <div className="page-head">
         <div>
           <h1>{COMPARE_H1}</h1>
@@ -176,6 +200,45 @@ export function ComparePage() {
             <Link className="btn btn-secondary btn-sm" to={`/app/company/${watched.profile.companyNumber}`}>
               Review risk <Icon name="arrow-right" />
             </Link>
+          </div>
+        </section>
+      )}
+
+      {!loading && shortlistBrief && (
+        <section className="shortlist-brief" aria-labelledby="shortlist-brief-title">
+          <div className="brief-head">
+            <div>
+              <div className="s-eyebrow">Shareable shortlist brief</div>
+              <h2 id="shortlist-brief-title">A decision note you can send before the next call.</h2>
+              <p>Turn this comparison into a concise recommendation, the checks to clear, and the questions to ask next.</p>
+            </div>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(shortlistBriefToText(shortlistBrief))
+                  .then(() => setToast({ text: 'Shortlist brief copied', tone: 'ok' }))
+                  .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+              }}
+            >
+              <Icon name="copy" /> Copy shortlist brief
+            </button>
+          </div>
+          <div className="brief-grid">
+            <div className="brief-card pick">
+              <span className="summary-label">Why this pick</span>
+              <h3>{shortlistBrief.pick}</h3>
+              <ul>{shortlistBrief.why.map((item) => <li key={item}>{item}</li>)}</ul>
+            </div>
+            <div className="brief-card watch">
+              <span className="summary-label">Risks to clear</span>
+              <ul>{shortlistBrief.risks.map((item) => <li key={item}>{item}</li>)}</ul>
+            </div>
+            <div className="brief-card questions">
+              <span className="summary-label">Questions to ask next</span>
+              <ol>{shortlistBrief.questions.map((item) => <li key={item}>{item}</li>)}</ol>
+              <p className="next-action">Next action: open the best report and clear the watch list before committing.</p>
+            </div>
           </div>
         </section>
       )}
@@ -305,6 +368,88 @@ interface RowProps {
   cells: { tone: 'ok' | 'warn' | 'bad'; val: string; sub: string }[];
   bestIdx?: number;
   worstIdx?: number;
+}
+
+type ShortlistBrief = {
+  pick: string;
+  why: string[];
+  risks: string[];
+  questions: string[];
+};
+
+function buildShortlistBrief(reports: CompanyReport[], best: CompanyReport, watched: CompanyReport): ShortlistBrief {
+  const sortedByRisk = [...reports].sort((a, b) => a.assessment.score - b.assessment.score);
+  const years = yearsSince(best.profile.incorporatedOn);
+  const why = [
+    `${best.profile.companyName} has the strongest current score in this shortlist (${best.assessment.score}/100, ${riskHeadline(best)}).`,
+    best.profile.companyStatus === 'active'
+      ? 'Companies House lists it as active.'
+      : `Companies House lists it as ${best.profile.companyStatus}; verify status before proceeding.`,
+    years !== null
+      ? `It has ${years} year${years === 1 ? '' : 's'} of filing history to review.`
+      : 'Its incorporation date is unavailable, so confirm operating history directly.',
+  ];
+
+  const risks = sortedByRisk.flatMap((report) => riskLines(report)).slice(0, 4);
+  const questions = [
+    `Ask ${best.profile.companyName}: who is the exact contracting or employing entity, and can they confirm the next filing deadline?`,
+    `Ask ${watched.profile.companyName}: ${questionForRisk(watched)}`,
+    'Save or export this comparison so the shortlist can be re-checked before the final commitment.',
+  ];
+
+  return {
+    pick: `${best.profile.companyName} is the best current pick, with ${watched.profile.companyName} the main watch item.`,
+    why,
+    risks: risks.length > 0 ? risks : ['No obvious public-record blockers in this shortlist; still verify commercial and people-fit signals directly.'],
+    questions,
+  };
+}
+
+function shortlistBriefToText(brief: ShortlistBrief): string {
+  return [
+    'CareerMove shortlist brief',
+    '',
+    `Recommendation: ${brief.pick}`,
+    '',
+    'Why this pick:',
+    ...brief.why.map((item, i) => `${i + 1}. ${item}`),
+    '',
+    'Risks to clear:',
+    ...brief.risks.map((item, i) => `${i + 1}. ${item}`),
+    '',
+    'Questions to ask next:',
+    ...brief.questions.map((item, i) => `${i + 1}. ${item}`),
+    '',
+    'Next action: open the best report and clear the watch list before committing.',
+  ].join('\n');
+}
+
+function riskLines(report: CompanyReport): string[] {
+  const lines = report.assessment.flags
+    .filter((flag) => flag.severity === 'CRITICAL' || flag.severity === 'WARNING')
+    .slice(0, 2)
+    .map((flag) => `${report.profile.companyName}: ${flag.title} — ${flag.recommendedAction || flag.explanation}`);
+
+  if (report.insolvency.length > 0) {
+    lines.unshift(`${report.profile.companyName}: insolvency records are present — review the formal case details.`);
+  }
+  if (report.profile.accountsOverdue) {
+    lines.push(`${report.profile.companyName}: accounts are overdue — ask what caused the delay and when it will be resolved.`);
+  }
+  const outstandingCharges = report.charges.filter((charge) => charge.status === 'outstanding').length;
+  if (outstandingCharges > 0) {
+    lines.push(`${report.profile.companyName}: ${outstandingCharges} outstanding charge${outstandingCharges === 1 ? '' : 's'} — clarify lender obligations.`);
+  }
+
+  return lines;
+}
+
+function questionForRisk(report: CompanyReport): string {
+  const firstFlag = report.assessment.flags.find((flag) => flag.severity === 'CRITICAL' || flag.severity === 'WARNING');
+  if (firstFlag) return `can you explain “${firstFlag.title}” and share evidence for the fix?`;
+  if (report.profile.accountsOverdue) return 'what caused the overdue accounts and when will they be filed?';
+  if (report.charges.some((charge) => charge.status === 'outstanding')) return 'which outstanding charges affect payment, hiring, or delivery risk?';
+  return 'what changed recently that could affect the commitment we are about to make?';
 }
 
 function Row({ label, cells, bestIdx, worstIdx }: RowProps) {

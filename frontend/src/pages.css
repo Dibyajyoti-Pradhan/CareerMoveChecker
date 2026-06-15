@@ -343,9 +343,22 @@ section.s.tight { padding: 64px 0 96px; }
 .compare-summary .summary-card { display: flex; flex-direction: column; gap: 10px; }
 .compare-summary .summary-card.best { border-top: 4px solid var(--ok); }
 .compare-summary .summary-card.watch { border-top: 4px solid var(--warn); }
-.compare-summary .summary-label { font-family: var(--mono); font-size: 10.5px; color: var(--muted-2); letter-spacing: .08em; text-transform: uppercase; }
+.compare-summary .summary-label, .shortlist-brief .summary-label { font-family: var(--mono); font-size: 10.5px; color: var(--muted-2); letter-spacing: .08em; text-transform: uppercase; }
 .compare-summary strong { font-size: 15px; line-height: 1.25; }
 .compare-summary .btn { width: fit-content; margin-top: auto; }
+.shortlist-brief { margin: 0 0 20px; background: #fff; border: 1px solid var(--hair); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-sm); }
+.shortlist-brief .brief-head { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: end; padding: 20px 22px; background: linear-gradient(135deg, #fff, var(--canvas)); border-bottom: 1px solid var(--hair); }
+.shortlist-brief .brief-head h2 { margin: 8px 0 6px; font-size: 24px; line-height: 1.1; letter-spacing: -.02em; font-weight: 600; }
+.shortlist-brief .brief-head p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.shortlist-brief .brief-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--hair); }
+.shortlist-brief .brief-card { background: #fff; padding: 20px; }
+.shortlist-brief .brief-card.pick { border-top: 4px solid var(--ok); }
+.shortlist-brief .brief-card.watch { border-top: 4px solid var(--warn); }
+.shortlist-brief .brief-card.questions { border-top: 4px solid var(--brand); }
+.shortlist-brief .brief-card h3 { margin: 12px 0 10px; font-size: 18px; line-height: 1.25; letter-spacing: -.01em; }
+.shortlist-brief ul, .shortlist-brief ol { margin: 12px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+.shortlist-brief li { margin-bottom: 8px; }
+.shortlist-brief .next-action { margin: 14px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--brand-50); color: var(--brand); font-size: 12.5px; line-height: 1.45; }
 
 .results-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
 
@@ -721,7 +734,8 @@ section.s.tight { padding: 64px 0 96px; }
   .s-head, .persona-grid, .zones, .steps, .pricing, .moments, .perks, .perks-big,
   .conf-grid, .not-this, .zones-mini, .stats, .kpis, .two-col, .idle-grid,
   .id-meta, .flag-grid, .compare-grid, .search-grid, .account-shell,
-  .decision-card, .decision-grid, .decision-pack-head, .decision-pack-body { grid-template-columns: 1fr !important; }
+  .decision-card, .decision-grid, .decision-pack-head, .decision-pack-body,
+  .shortlist-brief .brief-head, .shortlist-brief .brief-grid { grid-template-columns: 1fr !important; }
   .step { border-right: 0; border-bottom: 1px dashed var(--hair); padding: 0 0 28px !important; }
   .step:not(:first-child) { padding: 28px 0 0 !important; }
   section.s { padding: 64px 0; }
