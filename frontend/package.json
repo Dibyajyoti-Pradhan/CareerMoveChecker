@@ -11,6 +11,7 @@
     "test:a11y": "node scripts/assert-homepage-a11y.mjs",
     "test:report-pack": "node scripts/assert-report-decision-pack.mjs",
     "test:search-shortlist": "node scripts/assert-search-shortlist.mjs",
+    "test:search-watchlist": "node scripts/assert-search-watchlist-save.mjs",
     "test:compare-summary": "node scripts/assert-compare-decision-summary.mjs",
     "test:compare-brief": "node scripts/assert-compare-shortlist-brief.mjs",
     "test:compare-paste": "node scripts/assert-compare-paste-shortlist.mjs",

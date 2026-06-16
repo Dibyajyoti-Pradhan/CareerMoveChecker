@@ -41,6 +41,8 @@ export function SearchPage() {
   const [searched, setSearched] = useState(Boolean(initialQ));
   const [recent, setRecent] = useState(() => getRecentSearches());
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(() => new Set());
+  const [savingSelected, setSavingSelected] = useState(false);
+  const [watchlistToast, setWatchlistToast] = useState<{ message: string; tone: 'ok' | 'bad' } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,8 +103,56 @@ export function SearchPage() {
 
   const clearShortlist = () => setSelectedCompanies(new Set());
 
+  const handleSaveSelectedToWatchlist = async () => {
+    if (selectedHits.length === 0) return;
+    setSavingSelected(true);
+    try {
+      await Promise.all(selectedHits.map((hit) =>
+        api.saveCompany({ companyNumber: hit.companyNumber, companyName: hit.companyName })
+      ));
+      setWatchlistToast({
+        message: `Saved ${selectedHits.length} compan${selectedHits.length === 1 ? 'y' : 'ies'} to your watchlist.`,
+        tone: 'ok',
+      });
+    } catch {
+      setWatchlistToast({ message: 'Watchlist save failed — try again.', tone: 'bad' });
+    } finally {
+      setSavingSelected(false);
+    }
+  };
+
   return (
     <>
+      {watchlistToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 80,
+            background: watchlistToast.tone === 'ok' ? 'var(--ok-bg)' : 'var(--bad-bg)',
+            color: watchlistToast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)',
+            border: `1px solid ${watchlistToast.tone === 'ok' ? 'var(--ok)' : 'var(--bad)'}`,
+            borderRadius: 999,
+            padding: '10px 14px',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            gap: 10,
+            alignItems: 'center',
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <span>{watchlistToast.message}</span>
+          {watchlistToast.tone === 'ok' && <Link to="/app/saved" style={{ color: 'inherit', textDecoration: 'underline' }}>View saved watchlist</Link>}
+          <button className="btn btn-ghost btn-sm" type="button" onClick={() => setWatchlistToast(null)} aria-label="Dismiss watchlist message">
+            <Icon name="x" size={12} />
+          </button>
+        </div>
+      )}
       <section className="command">
         <div className="wrap">
           <h1>{SEARCH_H1}</h1>
@@ -223,7 +273,12 @@ export function SearchPage() {
                   <h3>{SEARCH_RAIL_Q}</h3>
                   <span className="pill">{hits.length} results</span>
                 </div>
-                <CompareShortlist selectedHits={selectedHits} onClear={clearShortlist} />
+                <CompareShortlist
+                  selectedHits={selectedHits}
+                  onClear={clearShortlist}
+                  onSaveSelected={handleSaveSelectedToWatchlist}
+                  savingSelected={savingSelected}
+                />
                 <div className="result-list">
                   {hits.map((h) => (
                     <ResultRow
@@ -264,7 +319,17 @@ export function SearchPage() {
   );
 }
 
-function CompareShortlist({ selectedHits, onClear }: { selectedHits: CompanySearchHit[]; onClear: () => void }) {
+function CompareShortlist({
+  selectedHits,
+  onClear,
+  onSaveSelected,
+  savingSelected,
+}: {
+  selectedHits: CompanySearchHit[];
+  onClear: () => void;
+  onSaveSelected: () => void;
+  savingSelected: boolean;
+}) {
   const compareUrl = `/app/compare?numbers=${selectedHits.map((h) => h.companyNumber).join(',')}`;
 
   return (
@@ -273,7 +338,7 @@ function CompareShortlist({ selectedHits, onClear }: { selectedHits: CompanySear
         <h3>Compare shortlist</h3>
         <p>
           {selectedHits.length === 0
-            ? 'Select companies from the results to compare them side by side before you commit.'
+            ? 'Select companies from the results to compare them side by side, or save them to watch before you commit.'
             : `${selectedHits.length} selected: ${selectedHits.map((h) => h.companyName).join(', ')}`}
         </p>
       </div>
@@ -281,6 +346,15 @@ function CompareShortlist({ selectedHits, onClear }: { selectedHits: CompanySear
         {selectedHits.length > 0 && (
           <button className="btn btn-ghost btn-sm" type="button" onClick={onClear}>Clear shortlist</button>
         )}
+        <button
+          className="btn btn-secondary btn-sm"
+          type="button"
+          onClick={onSaveSelected}
+          disabled={selectedHits.length === 0 || savingSelected}
+          aria-label="Save selected search results to watchlist"
+        >
+          {savingSelected ? 'Saving…' : 'Save selected to watchlist'}
+        </button>
         <Link
           className="btn btn-primary btn-sm"
           to={compareUrl}
