@@ -53,6 +53,9 @@ export function SavedPage() {
   const [sort, setSort] = useState<'recent' | 'name' | 'score'>('recent');
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'bad' } | null>(null);
   const [bulkRefreshing, setBulkRefreshing] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   // Alerts feed state
   const [feed, setFeed] = useState<FeedResponse | null>(null);
@@ -151,6 +154,64 @@ export function SavedPage() {
     }
   };
 
+  const handleImportWatchlist = async () => {
+    const numbers = extractWatchlistCompanyNumbers(importText);
+    if (numbers.length === 0) {
+      setImportResult('Paste at least one UK company number or Companies House URL.');
+      setToast({ text: 'No company numbers found', tone: 'bad' });
+      return;
+    }
+
+    const existing = new Set(items.map((item) => item.companyNumber.toUpperCase()));
+    const duplicateCount = numbers.filter((number) => existing.has(number.toUpperCase())).length;
+    const candidates = numbers.filter((number) => !existing.has(number.toUpperCase()));
+    const toImport = candidates.slice(0, 25);
+    const heldBack = candidates.length - toImport.length;
+
+    if (toImport.length === 0) {
+      setImportResult('Everything pasted is already on your saved watchlist.');
+      setToast({ text: 'Already saved', tone: 'ok' });
+      return;
+    }
+
+    setImporting(true);
+    setImportResult(`Importing ${toImport.length} compan${toImport.length === 1 ? 'y' : 'ies'}…`);
+    let savedCount = 0;
+    let failedCount = 0;
+    const nextItems: SavedCompany[] = [];
+
+    for (const companyNumber of toImport) {
+      try {
+        const report = await api.getReport(companyNumber);
+        const saved = await api.saveCompany({
+          companyNumber: report.profile.companyNumber,
+          companyName: report.profile.companyName,
+          note: 'Imported from pasted watchlist',
+        });
+        savedCount += 1;
+        nextItems.push(saved);
+        setReports((cur) => ({ ...cur, [report.profile.companyNumber]: report }));
+      } catch {
+        failedCount += 1;
+      }
+    }
+
+    if (nextItems.length > 0) {
+      setItems((cur) => [...nextItems, ...cur]);
+      setImportText('');
+    }
+    const parts = [
+      `Imported ${savedCount} compan${savedCount === 1 ? 'y' : 'ies'} to your watchlist`,
+      duplicateCount > 0 ? `${duplicateCount} already saved` : '',
+      heldBack > 0 ? `${heldBack} held for a second import` : '',
+      failedCount > 0 ? `${failedCount} could not be found` : '',
+    ].filter(Boolean);
+    const message = parts.join(' · ');
+    setImportResult(message);
+    setToast({ text: savedCount > 0 ? `Imported ${savedCount} to watchlist` : 'Import finished with no new saves', tone: failedCount > 0 && savedCount === 0 ? 'bad' : 'ok' });
+    setImporting(false);
+  };
+
   return (
     <div className="wrap">
       {toast && (
@@ -176,6 +237,36 @@ export function SavedPage() {
           <Link className="btn btn-primary btn-sm" to="/app/search"><Icon name="plus" /> Add a company</Link>
         </div>
       </div>
+
+      <section className="watchlist-import" aria-label="Paste companies to save">
+        <div>
+          <div className="s-eyebrow">Paste a watchlist</div>
+          <h2>Add companies from a spreadsheet, email, or Companies House tabs.</h2>
+          <p>
+            Paste Companies House URLs, company numbers, or spreadsheet notes and CareerMove will save each matched company for re-checks.
+          </p>
+          <div className="import-example">
+            Companies House URLs, company numbers, or spreadsheet notes · up to 25 new companies per import
+          </div>
+        </div>
+        <div className="watchlist-import-box">
+          <textarea
+            aria-label="Paste companies to save"
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder={'00445790\nhttps://find-and-update.company-information.service.gov.uk/company/09446231\nClient shortlist: 03824658'}
+            rows={5}
+          />
+          <div className="watchlist-import-actions">
+            <span>{extractWatchlistCompanyNumbers(importText).length} detected</span>
+            <button className="btn btn-primary btn-sm" type="button" onClick={handleImportWatchlist} disabled={importing || importText.trim().length === 0}>
+              {importing ? <span className="spinner" /> : <Icon name="upload" />}
+              {importing ? 'Importing…' : 'Import to watchlist'}
+            </button>
+          </div>
+          {importResult && <p className="import-result" role="status">{importResult}</p>}
+        </div>
+      </section>
 
       {/* Recent changes (alerts feed) */}
       <section aria-label="Recent changes">
@@ -500,6 +591,11 @@ function riskPriority(level: RiskLevel): number {
   if (level === 'HIGH') return 2;
   if (level === 'MODERATE') return 1;
   return 0;
+}
+
+function extractWatchlistCompanyNumbers(input: string): string[] {
+  const matches = input.toUpperCase().match(/\b(?:[A-Z]{2}\d{6}|\d{8})\b/g) ?? [];
+  return Array.from(new Set(matches));
 }
 
 function watchlistBriefToText(brief: WatchlistBrief): string {

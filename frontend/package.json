@@ -16,6 +16,7 @@
     "test:compare-brief": "node scripts/assert-compare-shortlist-brief.mjs",
     "test:compare-paste": "node scripts/assert-compare-paste-shortlist.mjs",
     "test:saved-brief": "node scripts/assert-saved-watchlist-brief.mjs",
+    "test:saved-import": "node scripts/assert-saved-paste-import.mjs",
     "test:report-score": "node scripts/assert-report-score-breakdown.mjs",
     "test:report-deadlines": "node scripts/assert-report-deadline-tracker.mjs",
     "test:bulk-paste": "node scripts/assert-bulk-paste-entry.mjs",
