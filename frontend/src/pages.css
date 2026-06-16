@@ -633,6 +633,21 @@ section.s.tight { padding: 64px 0 96px; }
 .upload-card .info .stats-line { display: flex; gap: 16px; margin-top: 8px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .upload-card .info .stats-line b { color: var(--ink); font-weight: 600; }
 
+.bulk-decision-brief { display: grid; grid-template-columns: 1.15fr .95fr 1.25fr; gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: 18px; overflow: hidden; margin: 0 0 18px; box-shadow: var(--shadow-sm); }
+.bulk-decision-brief .brief-panel { background: #fff; padding: 22px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bulk-decision-brief .brief-panel.intro { background: linear-gradient(135deg, var(--brand-50), #fff); }
+.bulk-decision-brief .brief-panel.priority { border-top: 4px solid var(--warn); }
+.bulk-decision-brief .brief-panel.action { border-top: 4px solid var(--brand); }
+.bulk-decision-brief h2 { margin: 6px 0 0; font-size: 24px; line-height: 1.12; letter-spacing: -.02em; font-weight: 600; }
+.bulk-decision-brief h3 { margin: 8px 0 0; font-size: 18px; line-height: 1.25; letter-spacing: -.01em; }
+.bulk-decision-brief p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+.bulk-decision-brief .summary-label { font-family: var(--mono); font-size: 10.5px; color: var(--muted-2); letter-spacing: .08em; text-transform: uppercase; }
+.bulk-decision-brief .brief-counts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.bulk-decision-brief .brief-counts span { background: #fff; border: 1px solid var(--hair); border-radius: 999px; padding: 6px 10px; font-size: 12.5px; color: var(--ink-2); }
+.bulk-decision-brief ol { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+.bulk-decision-brief li { margin-bottom: 8px; }
+.bulk-decision-brief .brief-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+
 .results-table { background: #fff; border: 1px solid var(--hair); border-radius: 14px; overflow: hidden; }
 .results-table .head { display: grid; grid-template-columns: 40px 38px 1fr 120px 200px 140px 60px; gap: 12px; padding: 12px 18px; background: var(--canvas); border-bottom: 1px solid var(--hair); font: 500 11px/1 var(--mono); color: var(--muted-2); text-transform: uppercase; letter-spacing: .06em; }
 .brow { display: grid; grid-template-columns: 40px 38px 1fr 120px 200px 140px 60px; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--hair); align-items: center; font-size: 13.5px; }

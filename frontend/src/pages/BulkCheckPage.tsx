@@ -2,7 +2,7 @@ import { ChangeEvent, DragEvent, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../api/client';
-import type { BulkResult } from '../types';
+import type { BulkResult, BulkRow } from '../types';
 import { cn } from '../lib/cn';
 import { extractCompanyNumber } from '../lib/format';
 import { ScoreGauge } from '../components/ScoreGauge';
@@ -89,6 +89,7 @@ export function BulkCheckPage() {
 
   const filtered = result?.rows.filter((r) => filter === 'all' || r.bucket === filter) ?? [];
   const selectedRows = result?.rows.filter((row) => row.companyNumber && selected.has(row.companyNumber)) ?? [];
+  const bulkDecisionBrief = result ? buildBulkDecisionBrief(result.rows) : null;
 
   const saveSelectedToWatchlist = async () => {
     if (selectedRows.length === 0 || savingSelected) return;
@@ -244,6 +245,51 @@ export function BulkCheckPage() {
             <div className="stat"><span className="label">Watch closely</span><span className="val warn">{result.rows.filter((r) => r.bucket === 'watch').length}</span></div>
             <div className="stat"><span className="label">Do not contract</span><span className="val bad">{result.rows.filter((r) => r.bucket === 'avoid').length}</span></div>
           </div>
+
+          {bulkDecisionBrief && (
+            <section className="bulk-decision-brief" aria-label="Bulk decision briefing">
+              <div className="brief-panel intro">
+                <div className="s-eyebrow">Bulk decision briefing</div>
+                <h2>{bulkDecisionBrief.headline}</h2>
+                <p>{bulkDecisionBrief.summary}</p>
+                <div className="brief-counts" aria-label="Bulk result mix">
+                  <span><b>{bulkDecisionBrief.counts.safe}</b> safe</span>
+                  <span><b>{bulkDecisionBrief.counts.watch}</b> watch</span>
+                  <span><b>{bulkDecisionBrief.counts.avoid}</b> avoid</span>
+                  <span><b>{bulkDecisionBrief.counts.unmatched}</b> unmatched</span>
+                </div>
+              </div>
+              <div className="brief-panel priority">
+                <span className="summary-label">Top risk to clear</span>
+                <h3>{bulkDecisionBrief.priorityLabel}</h3>
+                <p>{bulkDecisionBrief.priorityDetail}</p>
+              </div>
+              <div className="brief-panel action">
+                <span className="summary-label">Best next action</span>
+                <ol>
+                  {bulkDecisionBrief.actions.map((action) => <li key={action}>{action}</li>)}
+                </ol>
+                <div className="brief-actions">
+                  {bulkDecisionBrief.compareNumbers.length > 1 && (
+                    <Link className="btn btn-primary btn-sm" to={`/app/compare?numbers=${bulkDecisionBrief.compareNumbers.join(',')}`}>
+                      <Icon name="compare" /> Compare priority set
+                    </Link>
+                  )}
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(bulkDecisionBriefToText(bulkDecisionBrief))
+                        .then(() => setToast({ text: 'Decision brief copied', tone: 'ok' }))
+                        .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+                    }}
+                  >
+                    <Icon name="copy" /> Copy decision brief
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           <div className="toolbar">
             {(['all', 'safe', 'watch', 'avoid', 'unmatched'] as const).map((f) => (
@@ -413,6 +459,85 @@ export function BulkCheckPage() {
 
 const MAX_BULK_ROWS = 50;
 const HEADER_CELLS = new Set(['company_number', 'company number', 'companynumber', 'number', 'name', 'company_name', 'company name']);
+
+type BulkDecisionBrief = {
+  headline: string;
+  summary: string;
+  priorityLabel: string;
+  priorityDetail: string;
+  actions: string[];
+  compareNumbers: string[];
+  counts: { safe: number; watch: number; avoid: number; unmatched: number };
+};
+
+function buildBulkDecisionBrief(rows: BulkRow[]): BulkDecisionBrief | null {
+  if (rows.length === 0) return null;
+
+  const counts = rows.reduce((acc, row) => {
+    if (row.bucket === 'safe') acc.safe += 1;
+    else if (row.bucket === 'watch') acc.watch += 1;
+    else if (row.bucket === 'avoid') acc.avoid += 1;
+    else acc.unmatched += 1;
+    return acc;
+  }, { safe: 0, watch: 0, avoid: 0, unmatched: 0 });
+
+  const matched = rows.filter((row) => row.companyNumber);
+  const ranked = [...matched].sort((a, b) => bulkRowPriority(b) - bulkRowPriority(a) || (a.score ?? 100) - (b.score ?? 100));
+  const priority = ranked[0];
+  const compareNumbers = ranked.slice(0, 3).map((row) => row.companyNumber!).filter(Boolean);
+
+  const needsManualClearance = counts.avoid + counts.watch;
+  const headline = needsManualClearance > 0
+    ? `${needsManualClearance} compan${needsManualClearance === 1 ? 'y needs' : 'ies need'} a manual clearance step.`
+    : 'No public-record blockers found in this batch.';
+
+  const summary = `${rows.length} row${rows.length === 1 ? '' : 's'} checked: ${counts.safe} safe, ${counts.watch} watch, ${counts.avoid} avoid, ${counts.unmatched} unmatched. Use this before sending work, signing, or placing candidates.`;
+
+  const priorityLabel = priority
+    ? `${priority.companyName ?? priority.input}${priority.companyNumber ? ` #${priority.companyNumber}` : ''}`
+    : 'No matched companies yet';
+  const priorityDetail = priority
+    ? `${priority.bucket === 'avoid' ? 'Avoid' : priority.bucket === 'watch' ? 'Watch' : 'Safe'} · ${priority.riskLevel ?? 'Unknown risk'} · ${priority.score ?? '—'}/100. Open the report and clear the evidence before committing.`
+    : 'The batch did not match any company numbers. Search the unmatched names on Companies House before making a decision.';
+
+  const actions = [
+    priority
+      ? `Open ${priority.companyName ?? priority.input} first and clear the highest-risk public-record signal.`
+      : 'Fix unmatched rows with exact 8-digit company numbers, then rerun the batch.',
+    counts.unmatched > 0
+      ? `Resolve ${counts.unmatched} unmatched row${counts.unmatched === 1 ? '' : 's'} before treating this batch as complete.`
+      : 'Export the CSV so the reviewed decision trail can travel with the shortlist.',
+    compareNumbers.length > 1
+      ? `Compare the ${compareNumbers.length} highest-priority matched companies side-by-side.`
+      : 'Save any watch or avoid companies to the watchlist for future changes.',
+  ];
+
+  return { headline, summary, priorityLabel, priorityDetail, actions, compareNumbers, counts };
+}
+
+function bulkRowPriority(row: BulkRow): number {
+  if (row.bucket === 'avoid') return 4;
+  if (row.bucket === 'watch') return 3;
+  if (row.bucket === 'safe') return 2;
+  return 1;
+}
+
+function bulkDecisionBriefToText(brief: BulkDecisionBrief): string {
+  return [
+    'CareerMove bulk decision brief',
+    '',
+    brief.headline,
+    brief.summary,
+    '',
+    `Top risk to clear: ${brief.priorityLabel}`,
+    brief.priorityDetail,
+    '',
+    'Best next action:',
+    ...brief.actions.map((action, i) => `${i + 1}. ${action}`),
+    '',
+    `Mix: ${brief.counts.safe} safe · ${brief.counts.watch} watch · ${brief.counts.avoid} avoid · ${brief.counts.unmatched} unmatched`,
+  ].join('\n');
+}
 
 const parseBulkInput = (text: string) => {
   return text
