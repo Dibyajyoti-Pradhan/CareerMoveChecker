@@ -58,12 +58,35 @@ export function ComparePage() {
     setSuggestions([]);
   };
 
+  const addIdentifiers = (identifiers: string[]) => {
+    const freeSlots = MAX - numbers.length;
+    const unique = identifiers
+      .map((identifier) => identifier.toUpperCase())
+      .filter((identifier, index, all) => all.indexOf(identifier) === index)
+      .filter((identifier) => !numbers.includes(identifier))
+      .slice(0, freeSlots);
+
+    if (unique.length === 0) {
+      setToast({ text: freeSlots <= 0 ? 'Compare list is full' : 'No new company numbers found', tone: 'bad' });
+      return;
+    }
+
+    setNumbers([...numbers, ...unique]);
+    setInput('');
+    setSuggestions([]);
+    const added = unique.length;
+    setToast({ text: `Added ${added} compan${added === 1 ? 'y' : 'ies'} to compare`, tone: 'ok' });
+  };
+
   const add = (e: FormEvent) => {
     e.preventDefault();
     const n = input.trim();
     if (!n) return;
-    if (/^\d+$/.test(n)) {
-      addNumber(n);
+    const extracted = extractCompareIdentifiers(input);
+    if (extracted.length > 1 || input.includes('\n') || input.includes(',')) {
+      addIdentifiers(extracted);
+    } else if (/^(?:\d{8}|[A-Za-z]{2}\d{6})$/.test(n)) {
+      addNumber(n.toUpperCase());
     } else if (suggestions.length > 0) {
       addNumber(suggestions[0].companyNumber);
     }
@@ -137,7 +160,15 @@ export function ComparePage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Add by company name or 8-digit number"
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData('text');
+                const identifiers = extractCompareIdentifiers(pasted);
+                if (identifiers.length > 1) {
+                  e.preventDefault();
+                  addIdentifiers(identifiers);
+                }
+              }}
+              placeholder="Add by company name, number, or paste shortlist"
               onKeyDown={(e) => { if (e.key === 'Escape') { setSuggestions([]); e.preventDefault(); } }}
               onBlur={() => { window.setTimeout(() => setSuggestions([]), 150); }}
               role="combobox"
@@ -147,6 +178,14 @@ export function ComparePage() {
           </div>
           <button className="btn btn-primary" type="submit" disabled={numbers.length >= MAX}>Add</button>
         </form>
+        <p className="small muted" style={{ margin: '8px 0 0' }}>
+          <strong>Paste a shortlist:</strong> Companies House links, commas, or new lines are cleaned into up to {MAX} compare slots.
+        </p>
+        {input.trim() && extractCompareIdentifiers(input).length > 1 && (
+          <p className="small" style={{ margin: '6px 0 0', color: 'var(--ok)' }}>
+            {extractCompareIdentifiers(input).slice(0, MAX - numbers.length).length} company numbers ready to add.
+          </p>
+        )}
         {suggestions.length > 0 && (
           <div role="listbox" style={{
             position: 'absolute', top: '100%', left: 0, right: 80, marginTop: 4,
@@ -491,6 +530,13 @@ function selectWatchIndex(reports: CompanyReport[], bestIdx: number): number {
   if (worstIdx < 0) return -1;
   if (worstIdx !== bestIdx) return worstIdx;
   return reports.length > 1 ? 1 : worstIdx;
+}
+
+function extractCompareIdentifiers(text: string): string[] {
+  const normalized = text.toUpperCase();
+  const urlNumbers = Array.from(normalized.matchAll(/COMPANY\/([A-Z]{2}\d{6}|\d{8})/g)).map((match) => match[1]);
+  const looseNumbers = Array.from(normalized.matchAll(/\b[A-Z]{2}\d{6}\b|\b\d{8}\b/g)).map((match) => match[0]);
+  return [...urlNumbers, ...looseNumbers].filter((identifier, index, all) => all.indexOf(identifier) === index);
 }
 
 function compareTakeaway(best: CompanyReport, watched: CompanyReport): string {

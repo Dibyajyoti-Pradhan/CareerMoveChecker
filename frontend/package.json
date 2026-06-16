@@ -13,6 +13,7 @@
     "test:search-shortlist": "node scripts/assert-search-shortlist.mjs",
     "test:compare-summary": "node scripts/assert-compare-decision-summary.mjs",
     "test:compare-brief": "node scripts/assert-compare-shortlist-brief.mjs",
+    "test:compare-paste": "node scripts/assert-compare-paste-shortlist.mjs",
     "test:saved-brief": "node scripts/assert-saved-watchlist-brief.mjs",
     "test:report-score": "node scripts/assert-report-score-breakdown.mjs",
     "test:report-deadlines": "node scripts/assert-report-deadline-tracker.mjs",
