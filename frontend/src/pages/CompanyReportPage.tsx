@@ -171,6 +171,7 @@ export function CompanyReportPage() {
   const canonicalUrl = `https://careermove.uk/c/${p.companyNumber}`;
   const decisionPack = buildDecisionPack(report, decisionPersona, canonicalUrl);
   const scoreDrivers = buildScoreDrivers(report);
+  const deadlineTracker = buildDeadlineTracker(report, canonicalUrl);
 
   const handleCopyQuestionPack = () => {
     const text = [
@@ -184,6 +185,12 @@ export function CompanyReportPage() {
     ].join('\n');
     navigator.clipboard?.writeText(text)
       .then(() => setToast({ text: 'Question pack copied', tone: 'ok' }))
+      .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
+  };
+
+  const handleCopyDeadlineReminder = () => {
+    navigator.clipboard?.writeText(deadlineReminderToText(deadlineTracker))
+      .then(() => setToast({ text: 'Filing reminder copied', tone: 'ok' }))
       .catch(() => setToast({ text: 'Could not copy — try again', tone: 'bad' }));
   };
 
@@ -418,6 +425,46 @@ export function CompanyReportPage() {
                 <Icon name="external" /> Share summary
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="deadline-tracker" aria-labelledby="deadline-tracker-title">
+        <div className="deadline-tracker-head">
+          <div>
+            <div className="s-eyebrow">Filing deadline tracker</div>
+            <h2 id="deadline-tracker-title">Know what to re-check before you commit.</h2>
+            <p>Companies House deadlines are often the first public signal to change. CareerMove turns them into a reminder you can copy into your workflow.</p>
+          </div>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={handleCopyDeadlineReminder}>
+            <Icon name="copy" /> Copy filing reminder
+          </button>
+        </div>
+        <div className="deadline-tracker-grid">
+          <div className={cn('deadline-signal', deadlineTracker.accounts.tone)}>
+            <span className="summary-label">Accounts</span>
+            <h3>{deadlineTracker.accounts.label}</h3>
+            <p>{deadlineTracker.accounts.detail}</p>
+          </div>
+          <div className={cn('deadline-signal', deadlineTracker.confirmation.tone)}>
+            <span className="summary-label">Confirmation statement</span>
+            <h3>{deadlineTracker.confirmation.label}</h3>
+            <p>{deadlineTracker.confirmation.detail}</p>
+          </div>
+          <div className="deadline-signal action">
+            <span className="summary-label">Best next action</span>
+            <h3>Set the re-check point</h3>
+            <p>{deadlineTracker.nextAction}</p>
+            <button className="btn btn-primary btn-sm" type="button" onClick={async () => {
+              try {
+                await api.saveCompany({ companyNumber: p.companyNumber, companyName: p.companyName });
+                setToast({ text: `Saved ${p.companyName} for deadline watch`, tone: 'ok' });
+              } catch {
+                setToast({ text: 'Could not save', tone: 'bad' });
+              }
+            }}>
+              <Icon name="star" /> Save and watch
+            </button>
           </div>
         </div>
       </section>
@@ -914,6 +961,108 @@ function buildScoreDrivers(report: CompanyReport) {
     : 'The score is not a simple pass or fail: positive records can sit alongside caution signals. Use the downside list as the first questions to ask.';
 
   return { band, bandTone, summary, downsides, upsides };
+}
+
+type DeadlineTone = 'ok' | 'warn' | 'bad';
+
+type DeadlineTracker = {
+  companyName: string;
+  companyNumber: string;
+  reportUrl: string;
+  accounts: { label: string; detail: string; tone: DeadlineTone };
+  confirmation: { label: string; detail: string; tone: DeadlineTone };
+  nextAction: string;
+};
+
+function buildDeadlineTracker(report: CompanyReport, canonicalUrl: string): DeadlineTracker {
+  const { profile: p, assessment: a } = report;
+  const accounts = buildAccountsDeadlineSignal(p.nextAccountsDue, Boolean(p.accountsOverdue));
+  const confirmation = p.confirmationStatementOverdue
+    ? {
+        label: 'Overdue now',
+        detail: 'Companies House marks the confirmation statement as overdue. Ask why it slipped before you rely on this company.',
+        tone: 'bad' as const,
+      }
+    : {
+        label: 'Not marked overdue',
+        detail: 'No overdue confirmation-statement flag was returned, but save the company so changes are re-checked before commitment.',
+        tone: 'ok' as const,
+      };
+
+  const nextAction = accounts.tone === 'bad' || confirmation.tone === 'bad'
+    ? 'Treat the overdue filing as a blocker: ask for the filed receipt or a clear explanation before signing, invoicing, or placing.'
+    : accounts.tone === 'warn'
+      ? `Set a reminder for ${formatDate(p.nextAccountsDue)} and re-check the report before money, notice periods, or candidate commitments move.`
+      : a.riskLevel === 'LOW'
+        ? 'Save the company and re-check near the next filing deadline; public records look current today, not guaranteed tomorrow.'
+        : 'Save the company and pair the deadline reminder with the risk questions above before you proceed.';
+
+  return {
+    companyName: p.companyName,
+    companyNumber: p.companyNumber,
+    reportUrl: canonicalUrl,
+    accounts,
+    confirmation,
+    nextAction,
+  };
+}
+
+function buildAccountsDeadlineSignal(nextAccountsDue?: string, isOverdue = false): DeadlineTracker['accounts'] {
+  if (isOverdue) {
+    return {
+      label: 'Accounts overdue now',
+      detail: 'Companies House marks the accounts as overdue. Do not treat this as admin noise; ask for the filing status before proceeding.',
+      tone: 'bad',
+    };
+  }
+
+  if (!nextAccountsDue) {
+    return {
+      label: 'No due date returned',
+      detail: 'Companies House did not return an accounts due date for this report. Re-check manually before a significant commitment.',
+      tone: 'warn',
+    };
+  }
+
+  const days = daysUntil(nextAccountsDue);
+  if (days !== null && days < 0) {
+    return {
+      label: 'Accounts due date passed',
+      detail: `The listed accounts due date was ${formatDate(nextAccountsDue)}. Verify whether a filing has landed since this data was fetched.`,
+      tone: 'bad',
+    };
+  }
+  if (days !== null && days <= 30) {
+    return {
+      label: `Due in ${days} day${days === 1 ? '' : 's'}`,
+      detail: `Next accounts are due ${formatDate(nextAccountsDue)}. Re-check close to the deadline so a late filing does not surprise you.`,
+      tone: 'warn',
+    };
+  }
+
+  return {
+    label: `Next due ${formatDate(nextAccountsDue)}`,
+    detail: 'Accounts are not currently overdue. Save this report and re-check near the filing window, especially before long commitments.',
+    tone: 'ok',
+  };
+}
+
+function daysUntil(dateString: string): number | null {
+  const due = new Date(`${dateString}T12:00:00Z`);
+  if (Number.isNaN(due.getTime())) return null;
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12));
+  return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function deadlineReminderToText(deadlineTracker: DeadlineTracker): string {
+  return [
+    `CareerMove filing reminder — ${deadlineTracker.companyName} (#${deadlineTracker.companyNumber})`,
+    `Accounts: ${deadlineTracker.accounts.label} — ${deadlineTracker.accounts.detail}`,
+    `Confirmation statement: ${deadlineTracker.confirmation.label} — ${deadlineTracker.confirmation.detail}`,
+    `Next action: ${deadlineTracker.nextAction}`,
+    `Report: ${deadlineTracker.reportUrl}`,
+  ].join('\n');
 }
 
 type DecisionPack = {

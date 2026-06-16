@@ -470,6 +470,21 @@ section.s.tight { padding: 64px 0 96px; }
 .decision-list ol, .decision-list ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
 .decision-list li { margin-bottom: 9px; }
 
+.deadline-tracker { margin: 22px 0 12px; border: 1px solid var(--hair); border-radius: 18px; background: #fff; overflow: hidden; box-shadow: var(--shadow-sm); }
+.deadline-tracker-head { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: end; padding: 22px 24px; border-bottom: 1px solid var(--hair); background: linear-gradient(135deg, #fff, var(--brand-50)); }
+.deadline-tracker-head h2 { margin: 8px 0 8px; font-size: clamp(22px, 2.4vw, 32px); line-height: 1.08; letter-spacing: -.025em; font-weight: 600; }
+.deadline-tracker-head p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 72ch; }
+.deadline-tracker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--hair); }
+.deadline-signal { background: #fff; padding: 22px; border-top: 4px solid var(--brand); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.deadline-signal.bad { border-top-color: var(--bad); background: linear-gradient(180deg, var(--bad-bg), #fff 44%); }
+.deadline-signal.warn { border-top-color: var(--warn); background: linear-gradient(180deg, var(--warn-bg), #fff 44%); }
+.deadline-signal.ok { border-top-color: var(--ok); background: linear-gradient(180deg, var(--ok-bg), #fff 44%); }
+.deadline-signal.action { border-top-color: var(--brand); }
+.deadline-signal .summary-label { font-family: var(--mono); font-size: 10.5px; color: var(--muted-2); letter-spacing: .08em; text-transform: uppercase; }
+.deadline-signal h3 { margin: 0; font-size: 18px; line-height: 1.25; letter-spacing: -.01em; }
+.deadline-signal p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+.deadline-signal .btn { width: fit-content; margin-top: auto; }
+
 .zone-c .data-card { background: #fff; border: 1px solid var(--hair); border-radius: 14px; padding: 22px; margin-top: 14px; }
 .zone-c .data-card h3 { margin: 0 0 14px; font-size: 16px; font-weight: 600; }
 .flag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
